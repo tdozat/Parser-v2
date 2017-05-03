@@ -69,7 +69,7 @@ class TokenVocab(BaseVocab):
       conll_files = self.train_files
     
     for conll_file in conll_files:
-      with codecs.open(conll_file, encoding='utf-8') as f:
+      with codecs.open(conll_file, encoding='utf-8', errors='ignore') as f:
         for line_num, line in enumerate(f):
           try:
             line = line.strip()

@@ -76,7 +76,7 @@ class Dataset(Configurable):
     """"""
     
     for data_file in self.data_files:
-      with codecs.open(data_file, encoding='utf-8') as f:
+      with codecs.open(data_file, encoding='utf-8', errors='ignore') as f:
         buff = []
         for line in f:
           line = line.strip()

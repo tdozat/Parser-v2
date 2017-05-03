@@ -210,6 +210,9 @@ class Configurable(object):
   @property
   def max_entries(self):
     return self.getint('max_entries')
+  @property
+  def skip_header(self):
+    return self.getboolean('skip_header')
   
   #=============================================================
   # [Retrained Vocab]

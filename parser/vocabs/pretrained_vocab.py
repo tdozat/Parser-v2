@@ -55,9 +55,9 @@ class PretrainedVocab(BaseVocab):
       matrix = linalg.linear(embeddings, self.token_embed_size, moving_params=moving_params)
       if moving_params is None:
         with tf.variable_scope('Linear', reuse=True):
-          A = tf.get_variable('Weights')
-          tf.losses.add_loss(tf.nn.l2_loss(tf.matmul(A, tf.transpose(A)) - tf.eye(self.token_embed_size)))
-    return embeddings
+          weights = tf.get_variable('Weights')
+          tf.losses.add_loss(tf.nn.l2_loss(tf.matmul(tf.transpose(weights), weights) - tf.eye(self.token_embed_size)))
+    return matrix
   
   #=============================================================
   def load(self):
@@ -65,15 +65,22 @@ class PretrainedVocab(BaseVocab):
     
     embeddings = []
     start_idx = len(self.special_tokens)
-    with codecs.open(self.filename, encoding='utf-8') as f:
+    with codecs.open(self.filename, encoding='utf-8', errors='ignore') as f:
+      if self.skip_header == True:
+        f.readline()
       for line_num, line in enumerate(f):
         if line_num < self.max_rank:
-          line = line.strip().split(' ')
-          embeddings.append(np.array(line[1:], dtype=np.float32))
-          self[line[0]] = start_idx + line_num
+          line = line.rstrip().split(' ')
+          if len(line) > 1:
+            embeddings.append(np.array(line[1:], dtype=np.float32))
+            self[line[0]] = start_idx + line_num
         else:
           break
-    self.embeddings = np.array(embeddings, dtype=np.float32)
+    try:
+      self.embeddings = np.stack(embeddings)
+    except:
+      shapes = set([embedding.shape for embedding in embeddings])
+      raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
     return
   
   #=============================================================
