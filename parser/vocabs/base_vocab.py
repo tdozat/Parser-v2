@@ -87,8 +87,11 @@ class BaseVocab(Configurable):
     """"""
     
     placeholder = self.generate_placeholder() if placeholder is None else placeholder
+    unk_mask = tf.expand_dims(tf.to_float(tf.equal(placeholder, self.UNK)), 2)
     embeddings = self.embeddings if moving_params is None else moving_params.average(self.embeddings)
-    return tf.nn.embedding_lookup(embeddings, placeholder)
+    embeddings = tf.nn.embedding_lookup(embeddings, placeholder)
+    noise = tf.random_normal(tf.shape(embeddings))
+    return unk_mask*noise + (1-unk_mask)*embeddings
   
   ##=============================================================
   #def embedding_lookup(self, placeholder, keep_prob=None, moving_params=None):
