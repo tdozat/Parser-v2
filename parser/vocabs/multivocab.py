@@ -75,6 +75,7 @@ class Multivocab(Configurable):
   #=============================================================
   def __call__(self, placeholder=None, moving_params=None):
     """"""
+    # TODO check to see if a word is all unk, and if so, replace it with a random vector
     
     embeddings = [vocab(moving_params=moving_params) for vocab in self]
     return tf.add_n(embeddings)
