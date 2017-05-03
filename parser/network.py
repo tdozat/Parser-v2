@@ -48,7 +48,7 @@ class Network(Configurable):
     word_vocab = WordVocab.from_configurable(self)
     pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
     subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
-    word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
+    word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
     lemma_vocab = LemmaVocab.from_configurable(self)
     tag_vocab = TagVocab.from_configurable(self)
     xtag_vocab = XTagVocab.from_configurable(self)

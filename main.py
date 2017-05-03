@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import re
+import os
 import sys
 import codecs
 from argparse import ArgumentParser
@@ -40,7 +41,7 @@ def train(load, **kwargs):
   """"""
   
   try:
-    if not load and os.path.isdir(kwargs['save_dir']):
+    if not load and os.path.isdir(kwargs['default']['save_dir']):
       raw_input('Save directory already exists. Press <enter> to continue or <ctrl-z> to abort.')
   except KeyboardInterrupt:
     sys.exit(0)
