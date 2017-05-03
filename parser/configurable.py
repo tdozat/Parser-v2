@@ -75,6 +75,7 @@ class Configurable(object):
                     kwargs.pop('config_file', '')]
     config.read(config_files)
     config_sections = {section.lower().replace(' ', '_'): section for section in config.sections()}
+    config_sections['default'] = 'DEFAULT'
     # argparse syntax should be --section_name option1=value1 option2=value2
     # kwarg syntax should be section_name={option1: value1, option2: value2}
     # or option1=value1, option2=value2

@@ -65,11 +65,12 @@ class PretrainedVocab(BaseVocab):
     
     embeddings = []
     start_idx = len(self.special_tokens)
+    max_rank = self.max_rank
     with codecs.open(self.filename, encoding='utf-8', errors='ignore') as f:
       if self.skip_header == True:
         f.readline()
       for line_num, line in enumerate(f):
-        if line_num < self.max_rank:
+        if (not max_rank) or line_num < max_rank:
           line = line.rstrip().split(' ')
           if len(line) > 1:
             embeddings.append(np.array(line[1:], dtype=np.float32))

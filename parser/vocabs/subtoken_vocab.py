@@ -159,8 +159,6 @@ class SubtokenVocab(TokenVocab):
   def set_feed_dict(self, data, feed_dict):
     """"""
     
-    maxlen = np.max(np.sum(np.greater(data, 0), axis=1))
-    data = data[:,:maxlen]
     uniq, inv = np.unique(data, return_inverse=True)
     # this placeholder stores the indices into the new, on-the-fly embedding matrix
     feed_dict[self.placeholder] = inv.reshape(data.shape)
@@ -173,8 +171,7 @@ class SubtokenVocab(TokenVocab):
       bucket_data = bucket.indices[idxs]
       # these placeholders store the bucket data's index into the vocab's subtoken matrix
       if bucket_data.shape[0]:
-        maxlen = np.max(np.sum(np.greater(bucket_data, 0), axis=1))
-        feed_dict[bucket.placeholder] = bucket_data[:,:maxlen]
+        feed_dict[bucket.placeholder] = bucket_data
       else:
         feed_dict[bucket.placeholder] = bucket_data[0:1,0:1]
     # this placeholder makes sure the on-the-fly embedding matrix is in the right order
