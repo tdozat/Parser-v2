@@ -116,22 +116,29 @@ class BaseParser(NN):
     pass
   
   #=============================================================
-  def parse(self, input_file, output_file, probs, inv_idxs):
+  def write_probs(self, input_file, output_file, probs, inv_idxs):
     """"""
     
     # TODO implement argmax, projective, nonprojective
     # Store the algorithms in a separate file that gets imported in Configurable
-    parse_algorithm = self.parse_algorithm 
+    #parse_algorithm = self.parse_algorithm 
     
     # Turns list of tuples of tensors into list of matrices
-    arc_probs = [arc_prob for prob in probs for arc_prob in probs[0]]
-    rel_probs = [rel_prob for prob in probs for rel_prob in probs[1]]
+    print(probs[0][0].shape, probs[1][0].shape)
+    arc_probs = [arc_prob for arc_batch in probs[0] for arc_prob in arc_batch]
+    rel_probs = [rel_prob for rel_batch in probs[1] for rel_prob in rel_batch]
+    print(arc_probs[0])
+    print(rel_probs[0])
     
     with open(output_file, 'w') as f:
       with open(input_file) as g:
-        for arc_prob, rel_prob in zip(arc_probs, rel_probs):
+        for i in xrange(len(inv_idxs)):
+          arc_prob, rel_prob = arc_probs[i], rel_probs[i]
           arc_preds = np.argmax(arc_prob, axis=0)
-          rel_preds = np.argmax(rel_prob, axis=0)
+          arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
+          arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
+          print(rel_prob.shape, arc_preds_one_hot.shape)
+          rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=0)
           for arc_pred, rel_pred in zip(arc_preds, rel_preds):
             line = g.readline()
             while not re.match('[0-9]+\t', line):
@@ -147,3 +154,8 @@ class BaseParser(NN):
   @property
   def train_keys(self):
     return ('n_tokens', 'n_seqs', 'loss', 'n_rel_correct', 'n_arc_correct', 'n_correct', 'n_seqs_correct')
+  
+  #=============================================================
+  @property
+  def parse_keys(self):
+    return ('arc_probs', 'rel_probs')

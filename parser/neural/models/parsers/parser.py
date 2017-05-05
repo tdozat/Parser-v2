@@ -87,7 +87,7 @@ class Parser(BaseParser):
     outputs = {
       'arc_logits': arc_logits,
       'arc_probs': arc_probs,
-      'arc_pred': arc_preds,
+      'arc_preds': arc_preds,
       'arc_targets': arc_targets,
       'arc_correct': arc_correct,
       'arc_loss': arc_loss,

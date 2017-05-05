@@ -73,8 +73,9 @@ for section_name in section_names:
 def parse(save_dir, **kwargs):
   """"""
   
+  files = kwargs.pop('files')
   network = Network(**kwargs)
-  network.parse(args)
+  network.parse(files)
   return
 #---------------------------------------------------------------
 
@@ -93,7 +94,7 @@ kwargs = {key: value for key, value in kwargs.iteritems() if value is not None}
 for section, values in kwargs.iteritems():
   if section in section_names:
     values = [value.split('=', 1) for value in values]
-    kwargs[key] = {opt: value for opt, value in values}
+    kwargs[section] = {opt: value for opt, value in values}
 if 'default' not in kwargs:
   kwargs['default'] = {}
 kwargs['default']['save_dir'] = save_dir

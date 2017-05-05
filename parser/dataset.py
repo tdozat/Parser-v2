@@ -136,7 +136,7 @@ class Dataset(Configurable):
     return
   
   def write_probs(self, input_file, output_file, probs):
-    self._parser_model.write_probs(fileobj, input_files, probs, self.multibucket.inv_idxs)
+    self._parser_model.write_probs(input_file, output_file, probs, self.multibucket.inv_idxs())
     return
   
   def plot(self, history):
@@ -156,6 +156,9 @@ class Dataset(Configurable):
   @property
   def train_keys(self):
     return self._parser_model.train_keys
+  @property
+  def parse_keys(self):
+    return self._parser_model.parse_keys
   
   #=============================================================
   def __len__(self):

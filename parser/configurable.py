@@ -23,6 +23,8 @@ import os
 import re
 import multiprocessing as mp
 import glob
+import warnings
+
 import numpy as np
 import tensorflow as tf
 
@@ -122,6 +124,8 @@ class Configurable(object):
     globbed = []
     for elt in lst:
       globbed.extend(glob.glob(elt))
+    if len(globbed) == 0:
+      warnings.warn('Original list %s has no valid files' % lst)
     return globbed
   
   def get(self, option):
@@ -161,8 +165,8 @@ class Configurable(object):
   def valid_files(self):
     return self.getfiles('valid_files')
   @property
-  def test_files(self):
-    return self.getfiles('test_files')
+  def parse_files(self):
+    return self.getfiles('parse_files')
   @property
   def verbose(self):
     return self.getboolean('verbose')
