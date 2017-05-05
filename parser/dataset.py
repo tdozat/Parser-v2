@@ -171,8 +171,6 @@ class Dataset(Configurable):
 #***************************************************************
 class Trainset(Dataset):
   PREFIX = 'train'
-class Validset(Dataset):
-  PREFIX = 'valid'
 class Parseset(Dataset):
   PREFIX = 'parse'
 

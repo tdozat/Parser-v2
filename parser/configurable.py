@@ -125,7 +125,7 @@ class Configurable(object):
     for elt in lst:
       globbed.extend(glob.glob(elt))
     if len(globbed) == 0:
-      warnings.warn('Original list %s has no valid files' % lst)
+      warnings.warn('Original list %s has no files' % lst)
     return globbed
   
   def get(self, option):
@@ -161,9 +161,6 @@ class Configurable(object):
   @property
   def train_files(self):
     return self.getfiles('train_files')
-  @property
-  def valid_files(self):
-    return self.getfiles('valid_files')
   @property
   def parse_files(self):
     return self.getfiles('parse_files')

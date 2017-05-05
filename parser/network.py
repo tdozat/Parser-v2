@@ -79,13 +79,13 @@ class Network(Configurable):
     
     
     # prep the configurables
-    self.add_file_vocabs(self.valid_files)
+    self.add_file_vocabs(self.parse_files)
     trainset = Trainset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
       train = self.optimizer(tf.losses.get_total_loss())
       train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
-    validset = Validset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
+    validset = Parseset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
       valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
