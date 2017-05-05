@@ -28,53 +28,73 @@ from argparse import ArgumentParser
 from parser import Configurable
 from parser import Network
 
+# TODO make the pretrained vocab names a list given to TokenVocab
 #***************************************************************
 # Set up the argparser
 argparser = ArgumentParser('Network')
 argparser.add_argument('--save_dir', required=True)
 subparsers = argparser.add_subparsers()
-
-#===============================================================
-# Train
-#---------------------------------------------------------------
-def train(load, **kwargs):
-  """"""
-  
-  try:
-    if not load and os.path.isdir(kwargs['default']['save_dir']):
-      raw_input('Save directory already exists. Press <enter> to continue or <ctrl-z> to abort.')
-  except KeyboardInterrupt:
-    sys.exit(0)
-  configurable = Configurable(**kwargs)
-  network = Network.from_configurable(configurable)
-  network.train(load=load)
-  return
-#---------------------------------------------------------------
-# TODO make the pretrained vocab names a list given to TokenVocab
-train_parser = subparsers.add_parser('train')
-train_parser.set_defaults(action=train)
-train_parser.add_argument('--load', action='store_true')
+section_names = set()
+# --section_name opt1=value1 opt2=value2 opt3=value3
 with codecs.open('config/defaults.cfg') as f:
   section_regex = re.compile('\[(.*)\]')
   for line in f:
     match = section_regex.match(line)
     if match:
-      # Section Name -> --section_name
-      section_name = '--'+match.group(1).lower().replace(' ', '_')
-      # --section_name opt1=value1 opt2=value2 opt3=value3
-      train_parser.add_argument(section_name, nargs='+')
+      section_names.add(match.group(1).lower().replace(' ', '_'))
+
+#===============================================================
+# Train
+#---------------------------------------------------------------
+def train(save_dir, **kwargs):
+  """"""
+  
+  load = kwargs.pop('load')
+  try:
+    if not load and os.path.isdir(save_dir):
+      raw_input('Save directory already exists. Press <enter> to continue or <ctrl-z> to abort.')
+  except KeyboardInterrupt:
+    sys.exit(0)
+  
+  network = Network(**kwargs)
+  network.train(load=load)
+  return
+#---------------------------------------------------------------
+
+train_parser = subparsers.add_parser('train')
+train_parser.set_defaults(action=train)
+train_parser.add_argument('--load', action='store_true')
+for section_name in section_names:
+  train_parser.add_argument('--'+section_name, nargs='+')
+
+#===============================================================
+# Parse
+#---------------------------------------------------------------
+def parse(save_dir, **kwargs):
+  """"""
+  
+  network = Network(**kwargs)
+  network.parse(args)
+  return
+#---------------------------------------------------------------
+
+parse_parser = subparsers.add_parser('parse')
+parse_parser.set_defaults(action=parse)
+for section_name in section_names:
+  parse_parser.add_argument('--'+section_name, nargs='+')
+parse_parser.add_argument('files', nargs='+')
 
 #***************************************************************
 # Parse the arguments
 kwargs = vars(argparser.parse_args())
 action = kwargs.pop('action')
 save_dir = kwargs.pop('save_dir')
-load = bool(kwargs.pop('load'))
 kwargs = {key: value for key, value in kwargs.iteritems() if value is not None}
 for section, values in kwargs.iteritems():
-  values = [value.split('=', 1) for value in values]
-  kwargs[key] = {opt: value for opt, value in values}
+  if section in section_names:
+    values = [value.split('=', 1) for value in values]
+    kwargs[key] = {opt: value for opt, value in values}
 if 'default' not in kwargs:
   kwargs['default'] = {}
 kwargs['default']['save_dir'] = save_dir
-action(load, **kwargs)  
+action(save_dir, **kwargs)  
