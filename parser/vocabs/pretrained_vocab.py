@@ -21,6 +21,8 @@ from __future__ import print_function
 
 import os
 import codecs
+import gzip
+from backports import lzma
 from collections import Counter
 
 import numpy as np
@@ -67,10 +69,15 @@ class PretrainedVocab(BaseVocab):
     embeddings = []
     start_idx = len(self.special_tokens)
     max_rank = self.max_rank
-    with codecs.open(self.filename, encoding='utf-8', errors='ignore') as f:
+    if self.filename.endswith('.xz'):
+      open_func = lzma.open
+    else:
+      open_func = codecs.open
+    with open_func(self.filename, 'rb') as f:
+      reader = codecs.getreader('utf-8')(f, errors='ignore')
       if self.skip_header == True:
-        f.readline()
-      for line_num, line in enumerate(f):
+        reader.readline()
+      for line_num, line in enumerate(reader):
         if (not max_rank) or line_num < max_rank:
           line = line.rstrip().split(' ')
           if len(line) > 1:
