@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import os
 import time
+import codecs
 import cPickle as pkl
 from collections import defaultdict
 
@@ -55,8 +56,8 @@ class Network(Configurable):
     head_vocab = HeadVocab.from_configurable(self)
     rel_vocab = RelVocab.from_configurable(self)
     self._vocabs = [dep_vocab, word_multivocab, lemma_vocab, tag_vocab, xtag_vocab, head_vocab, rel_vocab]
-    self._global_step = tf.Variable(0., trainable=False)
-    self._global_epoch = tf.Variable(0., trainable=False)
+    self._global_step = tf.Variable(0., trainable=False, name='global_step')
+    self._global_epoch = tf.Variable(0., trainable=False, name='global_epoch')
     self._optimizer = RadamOptimizer.from_configurable(self, global_step=self.global_step)
     return
   
@@ -83,15 +84,14 @@ class Network(Configurable):
     trainset = Trainset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
-      train = self.optimizer(tf.losses.get_total_loss())
-      train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
+    train = self.optimizer(tf.losses.get_total_loss())
+    train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
+    saver = tf.train.Saver(self.save_vars, max_to_keep=1)
     validset = Parseset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
-      valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
-
-    # prep the saver NOTE this has to come after defining train/valid_tensors
-    saver = tf.train.Saver(self.save_vars, max_to_keep=1)
+    valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
+    valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
     
     # calling these properties is inefficient so we save them in separate variables
     max_train_iters = self.max_train_iters
@@ -132,13 +132,16 @@ class Network(Configurable):
           if total_train_iters == 1 or (total_train_iters % validate_every == 0):
             valid_accumulators = np.zeros(len(train_outputs))
             valid_time = 0
-            for feed_dict in validset.iterbatches():
-              start_time = time.time()
-              batch_values = sess.run(valid_outputs, feed_dict=feed_dict)
-              batch_time = time.time() - start_time
-              # update accumulators
-              valid_accumulators += batch_values
-              valid_time += batch_time
+            with codecs.open(os.path.join(self.save_dir, 'sanity_check'), 'w', encoding='utf-8', errors='ignore') as f:
+              for feed_dict, sents in validset.iterbatches(return_check=True):
+                start_time = time.time()
+                batch_values = sess.run(valid_outputs+valid_outputs2, feed_dict=feed_dict)
+                batch_time = time.time() - start_time
+                # update accumulators
+                valid_accumulators += batch_values[:len(valid_outputs)]
+                valid_preds = batch_values[len(valid_outputs):]
+                valid_time += batch_time
+                validset.check(valid_preds, sents, f)
             # update history
             trainset.update_history(self.history['train'], train_accumulators)
             validset.update_history(self.history['valid'], valid_accumulators)
@@ -177,11 +180,12 @@ class Network(Configurable):
     trainset = Trainset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
-      train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
+    train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
+
     parseset = Parseset.from_configurable(self, self.vocabs, parse_files=':'.join(input_files), parser_model=self.parser_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       parse_tensors = parseset(moving_params=self.optimizer)
-      parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
+    parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
 
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
     config_proto = tf.ConfigProto()
@@ -190,7 +194,8 @@ class Network(Configurable):
     else:
       config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
     with tf.Session(config=config_proto) as sess:
-      sess.run(tf.global_variables_initializer())
+      for var in self.non_save_vars:
+        sess.run(var.initializer)
       saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       
       # Iterate through files and batches
@@ -204,14 +209,15 @@ class Network(Configurable):
         else:
           output_file = input_file
         
-        # clear the output file
         start_time = time.time()
         probs = []
-        for feed_dict in parseset.iterbatches(shuffle=False):
+        sents = []
+        for feed_dict, tokens in parseset.iterbatches(shuffle=False):
           probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
-        parseset.write_probs(os.path.join(input_dir, input_file), os.path.join(output_dir, output_file), probs)
+          sents.append(tokens)
+        parseset.write_probs(sents, os.path.join(output_dir, output_file), probs)
     if self.verbose:
-      print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files, start_time - time.time())), 'bright_green'))
+      print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
     return
   
   #=============================================================
@@ -226,7 +232,10 @@ class Network(Configurable):
     return self._optimizer
   @property
   def save_vars(self):
-    return filter(lambda x: u'Pretrained' not in x.name, tf.global_variables())
+    return filter(lambda x: u'Pretrained/Embeddings:0' != x.name, tf.global_variables())
+  @property
+  def non_save_vars(self):
+    return filter(lambda x: u'Pretrained/Embeddings:0' == x.name, tf.global_variables())
   @property
   def global_step(self):
     return self._global_step

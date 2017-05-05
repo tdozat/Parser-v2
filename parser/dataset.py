@@ -30,7 +30,7 @@ from parser import Configurable, Multibucket
 from parser.vocabs.base_vocab import BaseVocab
 from parser.misc.bucketer import Bucketer
 
-__all__ = ['Trainset', 'Validset', 'Parseset']
+__all__ = ['Trainset', 'Parseset']
 
 #***************************************************************
 class Dataset(Configurable):
@@ -59,7 +59,9 @@ class Dataset(Configurable):
       multibucket.open(splits, depth=vocab.depth)
     for sent in self.iterfiles():
       for multibucket, vocab in self.iteritems():
-        multibucket.add([vocab.ROOT] + [vocab.index(line[vocab.conll_idx]) for line in sent])
+        tokens = [line[vocab.conll_idx] for line in sent]
+        idxs = [vocab.ROOT] + [vocab.index(token) for token in tokens]
+        multibucket.add(idxs, tokens)
     for multibucket in self:
       multibucket.close()
     self._multibucket = Multibucket.from_dataset(self)
@@ -89,7 +91,7 @@ class Dataset(Configurable):
         yield buff
   
   #=============================================================
-  def iterbatches(self, shuffle=True):
+  def iterbatches(self, shuffle=True, return_check=False):
     """"""
     
     batch_size = self.batch_size
@@ -109,17 +111,30 @@ class Dataset(Configurable):
         range_func = np.random.permutation
       else:
         range_func = np.arange
-      splits = np.array_split(range_func(bucket.indices.shape[0]), n_splits)
+      splits = np.array_split(range_func(bucket.indices.shape[0])[1:], n_splits)
       for split in splits:
         batches.append( (bkt_idx, split) )
     if shuffle:
       np.random.shuffle(batches)
+
     for bkt_idx, batch in batches:
       feed_dict = {}
+      tokens = []
       for multibucket, vocab in self.iteritems():
         bucket = multibucket[bkt_idx]
-        vocab.set_feed_dict(bucket.indices[batch], feed_dict)
-      yield feed_dict
+        indices = bucket.indices[batch]
+        vocab.set_feed_dict(indices, feed_dict)
+        if return_check:
+          if len(indices.shape) == 2:
+            tokens.append(vocab[indices])
+          elif len(indices.shape) == 3:
+            tokens.extend([subvocab[indices[:,:,i]] for i, subvocab in enumerate(vocab)])
+        elif not shuffle:
+          tokens.append(bucket.get_tokens(batch))
+      if not shuffle or return_check:
+        yield feed_dict, zip(*tokens)
+      else:
+        yield feed_dict
   
   #=============================================================
   def iteritems(self):
@@ -135,8 +150,12 @@ class Dataset(Configurable):
     self._parser_model.print_accuracy(accumulators, time, prefix=self.PREFIX.title())
     return
   
-  def write_probs(self, input_file, output_file, probs):
-    self._parser_model.write_probs(input_file, output_file, probs, self.multibucket.inv_idxs())
+  def write_probs(self, sents, output_file, probs):
+    self._parser_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs())
+    return
+
+  def check(self, preds, sents, fileobj):
+    self._parser_model.check(preds, sents, fileobj)
     return
   
   def plot(self, history):
@@ -156,6 +175,9 @@ class Dataset(Configurable):
   @property
   def train_keys(self):
     return self._parser_model.train_keys
+  @property
+  def valid_keys(self):
+    return self._parser_model.valid_keys
   @property
   def parse_keys(self):
     return self._parser_model.parse_keys

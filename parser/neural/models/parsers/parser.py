@@ -59,7 +59,7 @@ class Parser(BaseParser):
       # (n x b x d) * (d x r x d) * (n x b x d).T -> (n x b x r x b)
       rel_logits = self.bilinear(rel_dep_mlp, rel_head_mlp, len(self.vocabs['rels']))
       # (n x b x r x b)
-      rel_probs = tf.nn.softmax(rel_logits)
+      rel_probs = tf.nn.softmax(rel_logits, dim=2)
       # (n x b x b)
       one_hot = tf.one_hot(arc_preds if moving_params is not None else arc_targets, self.bucket_size)
       # (n x b x b) -> (n x b x b x 1)

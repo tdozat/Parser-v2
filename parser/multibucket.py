@@ -78,14 +78,14 @@ class Multibucket(Configurable):
     return self
   
   #=============================================================
-  def add(self, idxs):
+  def add(self, idxs, tokens):
     """"""
     
     if isinstance(self.indices, np.ndarray):
       raise TypeError("The buckets have already been closed, you can't add to them")
     
     idx = self._len2idx.get(len(idxs), len(self)-1)
-    bkt_idx = self[idx].add(idxs)
+    bkt_idx = self[idx].add(idxs, tokens)
     self.indices.append( (idx, bkt_idx) )
     return len(self.indices) - 1
   
@@ -103,8 +103,14 @@ class Multibucket(Configurable):
   def inv_idxs(self):
     """"""
     
-    return np.argsort(np.concatenate([np.where(self.indices['bkt_idx'] == bkt_idx)[0] for bkt_idx in range(len(self))]))
+    return np.argsort(np.concatenate([np.where(self.indices['bkt_idx'][1:] == bkt_idx)[0] for bkt_idx in xrange(len(self))]))
   
+  #=============================================================
+  def get_tokens(self, bkt_idx, batch):
+    """"""
+
+    return self[bkt_idx].get_tokens(batch)
+
   #=============================================================
   @classmethod
   def from_dataset(cls, dataset, *args, **kwargs):

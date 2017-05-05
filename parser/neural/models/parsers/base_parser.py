@@ -20,6 +20,7 @@ from __future__ import division
 from __future__ import print_function
 
 import re
+import codecs
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -116,7 +117,19 @@ class BaseParser(NN):
     pass
   
   #=============================================================
-  def write_probs(self, input_file, output_file, probs, inv_idxs):
+  def check(self, preds, sents, fileobj):
+    """"""
+
+    for tokens, arc_preds, rel_preds in zip(sents, preds[0], preds[1]):
+      for token, arc_pred, rel_pred in zip(zip(*tokens), arc_preds, rel_preds):
+        arc = self.vocabs['heads'][arc_pred]
+        rel = self.vocabs['rels'][rel_pred]
+        fileobj.write('\t'.join(token+(arc, rel))+'\n')
+      fileobj.write('\n')
+    return
+
+  #=============================================================
+  def write_probs(self, sents, output_file, probs, inv_idxs):
     """"""
     
     # TODO implement argmax, projective, nonprojective
@@ -124,30 +137,32 @@ class BaseParser(NN):
     #parse_algorithm = self.parse_algorithm 
     
     # Turns list of tuples of tensors into list of matrices
-    print(probs[0][0].shape, probs[1][0].shape)
-    arc_probs = [arc_prob for arc_batch in probs[0] for arc_prob in arc_batch]
-    rel_probs = [rel_prob for rel_batch in probs[1] for rel_prob in rel_batch]
-    print(arc_probs[0])
-    print(rel_probs[0])
+    arc_probs = [arc_prob for batch in probs for arc_prob in batch[0]]
+    rel_probs = [rel_prob for batch in probs for rel_prob in batch[1]]
+    tokens_to_keep = [weight for batch in probs for weight in batch[2]]
+    tokens = [sent for batch in sents for sent in batch]
     
-    with open(output_file, 'w') as f:
-      with open(input_file) as g:
-        for i in xrange(len(inv_idxs)):
-          arc_prob, rel_prob = arc_probs[i], rel_probs[i]
-          arc_preds = np.argmax(arc_prob, axis=0)
-          arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
-          arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
-          print(rel_prob.shape, arc_preds_one_hot.shape)
-          rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=0)
-          for arc_pred, rel_pred in zip(arc_preds, rel_preds):
-            line = g.readline()
-            while not re.match('[0-9]+\t', line):
-              line = g.readline()
-            line = line.strip().split('\t')
-            line[6] = str(arc_pred)
-            line[7] = self.vocabs['rels'][rel_pred]
-            f.write('\t'.join(line)+'\n')
-          f.write('\n')
+    with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
+      for i in inv_idxs:
+        sent, arc_prob, rel_prob, weights = tokens[i], arc_probs[i], rel_probs[i], tokens_to_keep[i]
+        sent = zip(*sent)
+        weights[0] = 1
+        weight = weights * (1-np.eye(len(weights)))
+        arc_preds = np.argmax(arc_prob*weight, axis=0)
+        weights[0] = 0
+        arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
+        arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
+        rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=0)
+        for token, arc_pred, rel_pred, weight in zip(sent, arc_preds[1:], rel_preds[1:], weights[1:]):
+          token = list(token)
+          token.insert(5, '_')
+          token.append('_')
+          token.append('_')
+          if weight:
+            tokens[6] = self.vocabs['heads'][arc_pred]
+            tokens[7] = self.vocabs['rels'][rel_pred]
+            f.write('\t'.join(token)+'\n')
+        f.write('\n')
     return
   
   #=============================================================
@@ -157,5 +172,10 @@ class BaseParser(NN):
   
   #=============================================================
   @property
+  def valid_keys(self):
+    return ('arc_preds', 'rel_preds')
+
+  #=============================================================
+  @property
   def parse_keys(self):
-    return ('arc_probs', 'rel_probs')
+    return ('arc_probs', 'rel_probs', 'tokens_to_keep')

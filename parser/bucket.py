@@ -38,6 +38,7 @@ class Bucket(Configurable):
     self._indices = []
     self._maxlen = 0
     self._depth = 1
+    self._tokens = []
     if embed_model is not None:
       self._embed_model = embed_model.from_configurable(self, name=self.name)
     else:
@@ -58,12 +59,13 @@ class Bucket(Configurable):
       self._indices = [[0]]
     else:
       self._indices = [[[0]*depth]]
+    self._tokens = [['']]
     self._maxlen = maxlen
     self._depth = depth
     return self
   
   #=============================================================
-  def add(self, idxs):
+  def add(self, idxs, tokens):
     """"""
     
     if isinstance(self.indices, np.ndarray):
@@ -72,8 +74,15 @@ class Bucket(Configurable):
       raise ValueError('Bucket of max len %d received sequence of len %d' % (len(self), len(idxs)))
     
     self.indices.append(idxs)
+    self.tokens.append(tokens)
     return len(self.indices) - 1
   
+  #=============================================================
+  def get_tokens(self, batch):
+    """"""
+    
+    return [self.tokens[sent_idx] for sent_idx in batch]
+
   #=============================================================
   def close(self):
     """"""
@@ -88,8 +97,6 @@ class Bucket(Configurable):
         for j, index in enumerate(sequence):
           indices[i,j,0:len(index)] = index
     self._indices = indices
-    #if self.verbose:
-    #  print('Bucket %s is %s' % (self.name, ' x '.join(str(x) for x in self.indices.shape)))
   
   #=============================================================
   @classmethod
@@ -111,6 +118,9 @@ class Bucket(Configurable):
     return bucket
     
   #=============================================================
+  @property
+  def tokens(self):
+    return self._tokens
   @property
   def indices(self):
     return self._indices

@@ -44,14 +44,6 @@ class IndexVocab(Configurable):
     super(IndexVocab, self).__init__(*args, **kwargs)
     self.placeholder = None
   
-  ##=============================================================
-  #def __call__(self, *args, **kwargs):
-  #  """"""
-  #  
-  #  if self.placeholder is None:
-  #    self.placeholder = tf.placeholder(tf.int32, shape=[None, None], name=self.name)
-  #  return None
-  
   #=============================================================
   def generate_placeholder(self):
     """"""
@@ -78,6 +70,18 @@ class IndexVocab(Configurable):
   @property
   def conll_idx(self):
     return self._conll_idx
+
+  #=============================================================
+  def __getitem__(self, key):
+    if isinstance(key, basestring):
+      return int(key)
+    elif isinstance(key, (int, long, np.int32, np.int64)):
+      return str(key)
+    elif hasattr(key, '__iter__'):
+      return [self[k] for k in key]
+    else:
+      raise ValueError('key to BaseVocab.__getitem__ must be (iterable of) string or integer')
+    return
 
 #***************************************************************
 class DepVocab(IndexVocab):

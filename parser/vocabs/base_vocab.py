@@ -90,19 +90,6 @@ class BaseVocab(Configurable):
     embeddings = self.embeddings if moving_params is None else moving_params.average(self.embeddings)
     return tf.nn.embedding_lookup(embeddings, placeholder)
   
-  ##=============================================================
-  #def embedding_lookup(self, placeholder, keep_prob=None, moving_params=None):
-  #  """"""
-  #  
-  #  if moving_params is None:
-  #    keep_prob = keep_prob or self.embed_keep_prob
-  #    if keep_prob < 1:
-  #      placeholder = linalg.random_where(keep_prob, placeholder, self.UNK)
-  #    embeddings = self.embeddings
-  #  else:
-  #    embeddings = moving_params.average(self.embeddings)
-  #  return tf.nn.embedding_lookup(embeddings, placeholder)
-  
   #=============================================================
   def set_feed_dict(self, data, feed_dict):
     """"""

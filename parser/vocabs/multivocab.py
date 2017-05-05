@@ -49,29 +49,6 @@ class Multivocab(Configurable):
     self.placeholder = None
     return
   
-  ##=============================================================
-  #def __call__(self, placeholder=None, keep_prob=None, moving_params=None):
-  #  """"""
-  #  
-  #  if self.placeholder is None:
-  #    self.placeholder = placeholder or tf.placeholder(tf.int32, shape=[None,None,None], name=self.name)
-  #  
-  #  if moving_params is None:
-  #    keep_prob = keep_prob or self.embed_keep_prob
-  #  else:
-  #    keep_prob = 1
-  #  
-  #  if keep_prob < 1:
-  #    mask_shape = tf.shape(self.placeholder)
-  #    mask_shape = tf.stack([mask_shape[0], mask_shape[1], 1])
-  #    placeholder = linalg.random_where(keep_prob, self.placeholder, self.UNK, mask_shape=mask_shape)
-  #  else:
-  #    placeholder = self.placeholder
-  #  
-  #  embeddings = [vocab(placeholder[:,:,i], keep_prob=1, moving_params=moving_params) for i, vocab in enumerate(self)]
-  #  # TODO: try averaging them with an embed model
-  #  return tf.add_n(embeddings)
-  
   #=============================================================
   def __call__(self, placeholder=None, moving_params=None):
     """"""
