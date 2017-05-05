@@ -68,7 +68,8 @@ class NN(Configurable):
       for vocab, placeholder, drop_mask in zip(vocabs, placeholders, drop_masks):
         embedding = vocab(placeholder)
         embedding *= scale_mask
-        embedding = noise_mask*embedding + (1-noise_mask)*tf.random_normal(tf.shape(embedding))
+        embedding = noise_mask*embedding + (1-noise_mask)*tf.zeros(tf.shape(embedding)) # changed for saves2/test7, test10+
+        #embedding = noise_mask*embedding + (1-noise_mask)*tf.random_normal(tf.shape(embedding))
         embeddings.append(embedding)
     else:
       embeddings = [vocab(moving_params=self.moving_params) for vocab in vocabs]

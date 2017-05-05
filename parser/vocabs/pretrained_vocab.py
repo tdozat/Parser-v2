@@ -58,6 +58,7 @@ class PretrainedVocab(BaseVocab):
           weights = tf.get_variable('Weights')
           tf.losses.add_loss(tf.nn.l2_loss(tf.matmul(tf.transpose(weights), weights) - tf.eye(self.token_embed_size)))
     return matrix
+    #return embeddings # changed in saves2/test8
   
   #=============================================================
   def load(self):
