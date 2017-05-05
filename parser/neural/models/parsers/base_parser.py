@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import re
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -113,6 +114,34 @@ class BaseParser(NN):
     """"""
     
     pass
+  
+  #=============================================================
+  def parse(self, input_file, output_file, probs, inv_idxs):
+    """"""
+    
+    # TODO implement argmax, projective, nonprojective
+    # Store the algorithms in a separate file that gets imported in Configurable
+    parse_algorithm = self.parse_algorithm 
+    
+    # Turns list of tuples of tensors into list of matrices
+    arc_probs = [arc_prob for prob in probs for arc_prob in probs[0]]
+    rel_probs = [rel_prob for prob in probs for rel_prob in probs[1]]
+    
+    with open(output_file, 'w') as f:
+      with open(input_file) as g:
+        for arc_prob, rel_prob in zip(arc_probs, rel_probs):
+          arc_preds = np.argmax(arc_prob, axis=0)
+          rel_preds = np.argmax(rel_prob, axis=0)
+          for arc_pred, rel_pred in zip(arc_preds, rel_preds):
+            line = g.readline()
+            while not re.match('[0-9]+\t', line):
+              line = g.readline()
+            line = line.strip().split('\t')
+            line[6] = str(arc_pred)
+            line[7] = self.vocabs['rels'][rel_pred]
+            f.write('\t'.join(line)+'\n')
+          f.write('\n')
+    return
   
   #=============================================================
   @property

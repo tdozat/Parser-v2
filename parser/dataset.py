@@ -30,7 +30,7 @@ from parser import Configurable, Multibucket
 from parser.vocabs.base_vocab import BaseVocab
 from parser.misc.bucketer import Bucketer
 
-__all__ = ['Trainset', 'Validset', 'Testset']
+__all__ = ['Trainset', 'Validset', 'Parseset']
 
 #***************************************************************
 class Dataset(Configurable):
@@ -117,8 +117,6 @@ class Dataset(Configurable):
     for bkt_idx, batch in batches:
       feed_dict = {}
       for multibucket, vocab in self.iteritems():
-        #data = multibucket.indices
-        #idxs = data[np.where(data['bkt_idx'] == bkt_idx)]['idx'][batch]
         bucket = multibucket[bkt_idx]
         vocab.set_feed_dict(bucket.indices[batch], feed_dict)
       yield feed_dict
@@ -135,6 +133,10 @@ class Dataset(Configurable):
   
   def print_accuracy(self, accumulators, time):
     self._parser_model.print_accuracy(accumulators, time, prefix=self.PREFIX.title())
+    return
+  
+  def write_probs(self, input_file, output_file, probs):
+    self._parser_model.write_probs(fileobj, input_files, probs, self.multibucket.inv_idxs)
     return
   
   def plot(self, history):
@@ -168,8 +170,8 @@ class Trainset(Dataset):
   PREFIX = 'train'
 class Validset(Dataset):
   PREFIX = 'valid'
-class Testset(Dataset):
-  PREFIX = 'test'
+class Parseset(Dataset):
+  PREFIX = 'parse'
 
 #***************************************************************
 if __name__ == '__main__':

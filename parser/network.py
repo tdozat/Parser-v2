@@ -48,7 +48,7 @@ class Network(Configurable):
     word_vocab = WordVocab.from_configurable(self)
     pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
     subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
-    word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
+    word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
     lemma_vocab = LemmaVocab.from_configurable(self)
     tag_vocab = TagVocab.from_configurable(self)
     xtag_vocab = XTagVocab.from_configurable(self)
@@ -156,18 +156,55 @@ class Network(Configurable):
           saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
                      global_step=self.global_epoch,
                      write_meta_graph=False)
-          trainset.plot(self.history['train'])
-          validset.plot(self.history['valid'])
           with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
             pkl.dump(dict(self.history), f)
       # definitely save
       saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
                  global_step=self.global_epoch,
                  write_meta_graph=False)
-      trainset.plot(self.history['train'])
-      validset.plot(self.history['valid'])
       with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
         pkl.dump(dict(self.history), f)
+    return
+  
+  #=============================================================
+  def parse(input_files, output_dir=None):
+    """"""
+    
+    if not isinstance(input_files, (tuple, list)):
+      input_file = [input_files]
+    
+    # load the model and prep the parse set
+    saver = tf.train.Saver(self.save_vars, max_to_keep=1)
+    config_proto = tf.ConfigProto()
+    if self.per_process_gpu_memory_fraction == -1:
+      config_proto.gpu_options.allow_growth = True
+    else:
+      config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
+    with tf.Session(config=config_proto) as sess:
+      saver.restore(sess, tf.train.latest_checkpoint(self.save_dir, latest_input_file=self.name.lower()))
+      parseset = Testset.from_configurable(self, self.vocabs, parse_files=input_files, parser_model=self.parser_model)
+      with tf.variable_scope(self.name.title(), reuse=True):
+        parse_tensors = parseset(moving_params=self.optimizer)
+        parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.train_keys]
+      
+      # Iterate through files and batches
+      for input_file in input_files:
+        self.add_file_vocabs(input_file)
+        input_dir, input_file = os.path.split(input_file)
+        if output_dir is None or output_dir == input_dir:
+          output_dir = input_dir
+          output_file = 'parsed-'+input_file
+        else:
+          output_file = input_file
+        
+        # clear the output file
+        start_time = time.time()
+        probs = []
+        for feed_dict in parseset.iterbatches(shuffle=False):
+          probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
+        parseset.write_probs(input_file, os.path.join(output_dir, output_file), probs)
+    if self.verbose:
+      print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files, start_time - time.time())), 'bright_green'))
     return
   
   #=============================================================

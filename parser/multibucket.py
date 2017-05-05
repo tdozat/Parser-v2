@@ -100,6 +100,12 @@ class Multibucket(Configurable):
     return
   
   #=============================================================
+  def inv_idxs(self):
+    """"""
+    
+    return np.argsort(np.concatenate([np.where(self.indices['bkt_idx'] == bkt_idx)[0] for bkt_idx in range(len(self))]))
+  
+  #=============================================================
   @classmethod
   def from_dataset(cls, dataset, *args, **kwargs):
     """"""
