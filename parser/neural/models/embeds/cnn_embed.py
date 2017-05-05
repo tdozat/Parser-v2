@@ -38,8 +38,7 @@ class CNNEmbed(BaseEmbed):
     with tf.variable_scope('CNN'):
       conv = self.CNN(embeddings, self.window_size, self.conv_size)
     # (n x b x h) -> (n x h)
-    with tf.variable_scope('Attn'):
-      hidden = self.linear_attention(conv)
+    hidden = tf.reduce_max(conv, axis=1)
     # (n x h) -> (n x o)
     linear = self.linear(hidden, vocab.token_embed_size)
     return linear 

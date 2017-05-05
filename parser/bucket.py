@@ -65,7 +65,7 @@ class Bucket(Configurable):
     return self
   
   #=============================================================
-  def add(self, idxs, tokens):
+  def add(self, idxs, tokens=None):
     """"""
     
     if isinstance(self.indices, np.ndarray):
@@ -74,7 +74,8 @@ class Bucket(Configurable):
       raise ValueError('Bucket of max len %d received sequence of len %d' % (len(self), len(idxs)))
     
     self.indices.append(idxs)
-    self.tokens.append(tokens)
+    if tokens is not None:
+      self.tokens.append(tokens)
     return len(self.indices) - 1
   
   #=============================================================

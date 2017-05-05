@@ -78,14 +78,14 @@ class Multibucket(Configurable):
     return self
   
   #=============================================================
-  def add(self, idxs, tokens):
+  def add(self, idxs, tokens=None):
     """"""
     
     if isinstance(self.indices, np.ndarray):
       raise TypeError("The buckets have already been closed, you can't add to them")
     
     idx = self._len2idx.get(len(idxs), len(self)-1)
-    bkt_idx = self[idx].add(idxs, tokens)
+    bkt_idx = self[idx].add(idxs, tokens=tokens)
     self.indices.append( (idx, bkt_idx) )
     return len(self.indices) - 1
   

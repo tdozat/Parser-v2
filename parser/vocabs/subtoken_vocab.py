@@ -66,28 +66,6 @@ class SubtokenVocab(TokenVocab):
       self.embeddings = np.random.randn(*embed_dims)
     return
   
-  ##=============================================================
-  #def __call__(self, placeholder=None, keep_prob=None, moving_params=None):
-  #  """"""
-  #  
-  #  if moving_params is None:
-  #    if keep_prob is None:
-  #      keep_prob = self.token_vocab.embed_keep_prob
-  #  else:
-  #    keep_prob = 1
-  #  
-  #  if self.placeholder is None:
-  #    if placeholder is None:
-  #      self.placeholder = tf.placeholder(tf.int32, shape=[None,None], name=self.name)
-  #    else:
-  #      self.placeholder = placeholder
-  #  if keep_prob < 1:
-  #      mask = linalg.random_mask(keep_prob, shape)
-  #      placeholder = mask * self.placeholder + (1-mask) * self.DROP
-  #  
-  #  embeddings = self.multibucket(self, keep_prob=self.embed_keep_prob, moving_params=moving_params)
-  #  return tf.nn.embedding_lookup(embeddings, self.placeholder)
-  
   #=============================================================
   def __call__(self, placeholder=None, moving_params=None):
     """"""
@@ -153,6 +131,8 @@ class SubtokenVocab(TokenVocab):
         self.tok2idx[special_token] = self.multibucket.add([index])
       for token, _ in self.sorted_counts(self.token_vocab.counts):
         self.tok2idx[token] = self.multibucket.add(tok2idxs[token])
+    self._idx2tok = {idx: tok for tok, idx in self.tok2idx.iteritems()}
+    self._idx2tok[0] = self[self.PAD]
     return
   
   #=============================================================
@@ -173,6 +153,7 @@ class SubtokenVocab(TokenVocab):
       if bucket_data.shape[0]:
         feed_dict[bucket.placeholder] = bucket_data
       else:
+        print('No data in bucket')
         feed_dict[bucket.placeholder] = bucket_data[0:1,0:1]
     # this placeholder makes sure the on-the-fly embedding matrix is in the right order
     feed_dict[self.multibucket.placeholder] = np.argsort(np.concatenate(unsorted))
@@ -203,6 +184,9 @@ class SubtokenVocab(TokenVocab):
   @property
   def tok2idx(self):
     return self._tok2idx
+  @property
+  def idx2tok(self):
+    return self._idx2tok
   
   #=============================================================
   def __setattr__(self, name, value):
