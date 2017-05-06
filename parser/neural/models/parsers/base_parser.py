@@ -63,7 +63,7 @@ class BaseParser(NN):
     top_recur = embed
     for i in xrange(self.n_layers):
       with tf.variable_scope('RNN%d' % i):
-        top_recur = self.RNN(top_recur, self.recur_size)
+        top_recur, _ = self.RNN(top_recur, self.recur_size)
     return top_recur
   
   #=============================================================

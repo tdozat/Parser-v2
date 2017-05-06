@@ -1,4 +1,4 @@
+* nonprojective MST parser
+
 * Make color inherit from configurable, with multiple color schemes: No color, light, dark (deut light, deut dark, swapping green for blue)
-* autoload xz files
-* clean up the vocab placeholder mess (also, debug)
-* actually parse files
+

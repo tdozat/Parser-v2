@@ -268,7 +268,6 @@ class NN(Configurable):
     
     input_size = inputs.get_shape().as_list()[-1]
     cell = self.recur_cell.from_configurable(self, output_size, input_size=input_size, moving_params=self.moving_params)
-    #lengths = tf.reshape(tf.to_int64(self.sequence_lengths), [-1])
     
     if self.moving_params is None:
       ff_keep_prob = self.ff_keep_prob
@@ -277,10 +276,10 @@ class NN(Configurable):
       ff_keep_prob = 1
       recur_keep_prob = 1
     
-    top_recur, _ = self.rnn_func(cell, inputs, self.sequence_lengths,
+    top_recur, end_state = self.rnn_func(cell, inputs, self.sequence_lengths,
                                  ff_keep_prob=ff_keep_prob,
                                  recur_keep_prob=recur_keep_prob)
-    return top_recur
+    return top_recur, end_state
   
   #=============================================================
   def __call__(self, inputs, targets, moving_params=None):

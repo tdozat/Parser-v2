@@ -22,6 +22,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
+import parser.neural.rnn as rnn
 from parser.neural.models.embeds.base_embed import BaseEmbed
 
 #***************************************************************
@@ -29,17 +30,21 @@ class RNNEmbed(BaseEmbed):
   """"""
   
   #=============================================================
-  def __call__(self, *args, **kwargs):
+  def __call__(self, vocab, **kwargs):
     """"""
     
     # (n x b x d)
-    embeddings = super(RNNEmbed, self).__call__(*args, **kwargs)
+    embeddings = super(RNNEmbed, self).__call__(vocab, **kwargs)
     # (n x b x d) -> (n x b x h)
     with tf.variable_scope('RNN'):
-      recur = self.RNN(embeddings, self.recur_size)
+      recur, state = self.RNN(embeddings, self.recur_size)
     # (n x b x h) -> (n x h)
     with tf.variable_scope('MLP'):
       hidden = self.linear_attention(recur)
+    if self.rnn_func == rnn.rnn:
+      state = tf.split(state, 2, axis=1)[0:1]
+    elif self.rnn_func == rnn.birnn:
+      state = tf.split(state, 4, axis=1)[0::2]
     # (n x h) -> (n x o)
-    linear = self.linear(hidden, vocab.token_embed_size)
+    linear = self.linear(tf.concat([hidden] + state, axis=1), vocab.token_embed_size)
     return linear 
