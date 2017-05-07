@@ -52,15 +52,15 @@ class PretrainedVocab(BaseVocab):
     """"""
     
     embeddings = super(PretrainedVocab, self).__call__(placeholder, moving_params=moving_params)
-    # (n x b x d') -> (n x b x d)
-    with tf.variable_scope(self.name.title()):
-      matrix = linalg.linear(embeddings, self.token_embed_size, moving_params=moving_params)
-      if moving_params is None:
-        with tf.variable_scope('Linear', reuse=True):
-          weights = tf.get_variable('Weights')
-          tf.losses.add_loss(tf.nn.l2_loss(tf.matmul(tf.transpose(weights), weights) - tf.eye(self.token_embed_size)))
-    return matrix
-    #return embeddings # changed in saves2/test8
+    ## (n x b x d') -> (n x b x d)
+    #with tf.variable_scope(self.name.title()):
+    #  matrix = linalg.linear(embeddings, self.token_embed_size, moving_params=moving_params)
+    #  if moving_params is None:
+    #    with tf.variable_scope('Linear', reuse=True):
+    #      weights = tf.get_variable('Weights')
+    #      tf.losses.add_loss(tf.nn.l2_loss(tf.matmul(tf.transpose(weights), weights) - tf.eye(self.token_embed_size)))
+    #return matrix
+    return embeddings # changed in saves2/test8
   
   #=============================================================
   def load(self):

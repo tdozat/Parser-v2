@@ -129,7 +129,7 @@ class Dataset(Configurable):
             tokens.append(vocab[indices])
           elif len(indices.shape) == 3:
             tokens.extend([subvocab[indices[:,:,i]] for i, subvocab in enumerate(vocab)])
-            # This is super hacky
+            # TODO This is super hacky
             if hasattr(subvocab, 'idx2tok'):
               tokens[-1] = [[subvocab.idx2tok.get(idx, subvocab[subvocab.PAD]) for idx in idxs] for idxs in indices[:,:,-1]]
         elif not shuffle:

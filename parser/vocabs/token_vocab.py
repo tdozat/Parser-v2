@@ -116,7 +116,7 @@ class TokenVocab(BaseVocab):
     for token, count in self.sorted_counts(self.counts):
       if ((count >= self.min_occur_count) and
           token not in self and 
-          len(self) < self.max_rank):
+          (not self.max_rank or len(self) < self.max_rank)):
         self[token] = len(self)
     return
   

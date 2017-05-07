@@ -59,7 +59,7 @@ class BaseEmbed(NN):
       self._tokens_to_keep = tf.to_float(tf.greater(self.placeholder, vocab.PAD))
     self._batch_size = tf.shape(self.placeholder)[0]
     self._bucket_size = tf.shape(self.placeholder)[1]
-    self._sequence_lengths = tf.reduce_sum(self.tokens_to_keep, axis=1)
+    self._sequence_lengths = tf.to_int32(tf.reduce_sum(self.tokens_to_keep, axis=1))
     self._n_tokens = tf.reduce_sum(self.sequence_lengths)
     return embeddings
   

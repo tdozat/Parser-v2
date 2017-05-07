@@ -47,11 +47,13 @@ class Multibucket(Configurable):
     """"""
     
     # This placeholder is used to ensure the bucket data is in the right order
+    reuse = None if moving_params is None else True
     self.generate_placeholder()
-    scope = tf.get_variable_scope()
     embeddings = []
     for i, bucket in enumerate(self):
-      with tf.variable_scope(self.name+'-multibucket', reuse=scope.reuse or (None if not i else True)):
+      if i > 0:
+        reuse = True
+      with tf.variable_scope(self.name+'-multibucket', reuse=reuse):
         embeddings.append(bucket(vocab, keep_prob=keep_prob, moving_params=moving_params))
     return tf.nn.embedding_lookup(embeddings, self.placeholder, partition_strategy='div')
   

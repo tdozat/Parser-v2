@@ -57,19 +57,16 @@ class NN(Configurable):
         placeholder = vocab.generate_placeholder()
         if len(placeholder.get_shape().as_list()) == 3:
           placeholder = tf.unstack(placeholder, axis=2)[0]
-        drop_mask = linalg.random_mask(vocab.embed_keep_prob, tf.shape(placeholder))
+        drop_mask = tf.expand_dims(linalg.random_mask(vocab.embed_keep_prob, tf.shape(placeholder)), 2)
         placeholders.append(placeholder)
         drop_masks.append(drop_mask)
       total_masks = tf.add_n(drop_masks)
-      noise_mask = tf.expand_dims(tf.to_float(total_masks > 0.), 2)
       scale_mask = len(drop_masks) / tf.maximum(total_masks, 1.)
-      scale_mask = tf.expand_dims(scale_mask, 2)
       embeddings = []
       for vocab, placeholder, drop_mask in zip(vocabs, placeholders, drop_masks):
+        # n x b x d
         embedding = vocab(placeholder)
-        embedding *= scale_mask
-        embedding = noise_mask*embedding + (1-noise_mask)*tf.zeros(tf.shape(embedding)) # changed for saves2/test7, test10+
-        #embedding = noise_mask*embedding + (1-noise_mask)*tf.random_normal(tf.shape(embedding))
+        embedding *= drop_mask*scale_mask
         embeddings.append(embedding)
     else:
       embeddings = [vocab(moving_params=self.moving_params) for vocab in vocabs]
