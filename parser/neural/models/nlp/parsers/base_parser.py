@@ -146,7 +146,7 @@ class BaseParser(NN):
       for i in inv_idxs:
         sent, arc_prob, rel_prob, weights = tokens[i], arc_probs[i], rel_probs[i], tokens_to_keep[i]
         sent = zip(*sent)
-        arc_preds = np.argmax(arc_prob, axis=0)
+        arc_preds = np.argmax(arc_prob, axis=1)
         arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
         arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
         rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=1)
