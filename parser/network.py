@@ -81,13 +81,13 @@ class Network(Configurable):
     
     # prep the configurables
     self.add_file_vocabs(self.parse_files)
-    trainset = Trainset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train = self.optimizer(tf.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    validset = Parseset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
+    validset = Parseset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
     valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
@@ -167,6 +167,28 @@ class Network(Configurable):
                  write_meta_graph=False)
       with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
         pkl.dump(dict(self.history), f)
+
+      # Now parse the training and testing files
+      input_files = self.train_files + self.parse_files
+      for input_file in input_files:
+        parseset = Parseset.from_configurable(self, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+        with tf.variable_scope(self.name.title(), reuse=True):
+          parse_tensors = parseset(moving_params=self.optimizer)
+        parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
+
+        input_dir, input_file = os.path.split(input_file)
+        output_dir = self.save_dir
+        output_file = input_file
+        
+        start_time = time.time()
+        probs = []
+        sents = []
+        for feed_dict, tokens in parseset.iterbatches(shuffle=False):
+          probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
+          sents.append(tokens)
+        parseset.write_probs(sents, os.path.join(output_dir, output_file), probs)
+    if self.verbose:
+      print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
     return
   
   #=============================================================
@@ -175,17 +197,13 @@ class Network(Configurable):
     
     if not isinstance(input_files, (tuple, list)):
       input_file = [input_files]
+    self.add_file_vocabs(input_files)
     
     # load the model and prep the parse set
-    trainset = Trainset.from_configurable(self, self.vocabs, parser_model=self.parser_model)
+    trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
-
-    parseset = Parseset.from_configurable(self, self.vocabs, parse_files=':'.join(input_files), parser_model=self.parser_model)
-    with tf.variable_scope(self.name.title(), reuse=True):
-      parse_tensors = parseset(moving_params=self.optimizer)
-    parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
 
     saver = tf.train.Saver(self.save_vars, max_to_keep=1)
     config_proto = tf.ConfigProto()
@@ -199,8 +217,12 @@ class Network(Configurable):
       saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       
       # Iterate through files and batches
-      self.add_file_vocabs(input_files)
       for input_file in input_files:
+        parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+        with tf.variable_scope(self.name.title(), reuse=True):
+          parse_tensors = parseset(moving_params=self.optimizer)
+        parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
+
         input_dir, input_file = os.path.split(input_file)
         if output_dir is None:
           output_dir = self.save_dir

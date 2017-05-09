@@ -40,16 +40,16 @@ class Dataset(Configurable):
   def __init__(self, vocabs, *args, **kwargs):
     """"""
     
-    parser_model = kwargs.pop('parser_model', None)
+    nlp_model = kwargs.pop('nlp_model', None)
     super(Dataset, self).__init__(*args, **kwargs)
     
     self._vocabs = vocabs
     self._multibuckets = [Multibucket.from_configurable(vocab, name='%s-%s'%(self.name, vocab.name)) for vocab in self.vocabs]
     
-    if parser_model is not None:
-      self._parser_model = parser_model.from_configurable(self, name=self.name)
+    if nlp_model is not None:
+      self._nlp_model = nlp_model.from_configurable(self, name=self.name)
     else:
-      self._parser_model = None
+      self._nlp_model = None
     
     with Bucketer.from_configurable(self, self.n_buckets, name='bucketer-%s'%self.name) as bucketer:
       splits = bucketer.compute_splits(len(sent) for sent in self.iterfiles())
@@ -71,7 +71,7 @@ class Dataset(Configurable):
   def __call__(self, moving_params=None):
     """"""
     
-    return self._parser_model(self.vocabs, moving_params=moving_params)
+    return self._nlp_model(self.vocabs, moving_params=moving_params)
   
   #=============================================================
   def iterfiles(self):
@@ -146,23 +146,23 @@ class Dataset(Configurable):
   
   #=============================================================
   def update_history(self, history, accumulators):
-    self._parser_model.update_history(history, accumulators)
+    self._nlp_model.update_history(history, accumulators)
     return
   
   def print_accuracy(self, accumulators, time):
-    self._parser_model.print_accuracy(accumulators, time, prefix=self.PREFIX.title())
+    self._nlp_model.print_accuracy(accumulators, time, prefix=self.PREFIX.title())
     return
   
   def write_probs(self, sents, output_file, probs):
-    self._parser_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs())
+    self._nlp_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs())
     return
 
   def check(self, preds, sents, fileobj):
-    self._parser_model.check(preds, sents, fileobj)
+    self._nlp_model.check(preds, sents, fileobj)
     return
   
   def plot(self, history):
-    self._parser_model.plot(history)
+    self._nlp_model.plot(history)
     return
   
   #=============================================================
@@ -177,13 +177,13 @@ class Dataset(Configurable):
     return self._vocabs
   @property
   def train_keys(self):
-    return self._parser_model.train_keys
+    return self._nlp_model.train_keys
   @property
   def valid_keys(self):
-    return self._parser_model.valid_keys
+    return self._nlp_model.valid_keys
   @property
   def parse_keys(self):
-    return self._parser_model.parse_keys
+    return self._nlp_model.parse_keys
   
   #=============================================================
   def __len__(self):

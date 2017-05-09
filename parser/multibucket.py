@@ -55,7 +55,7 @@ class Multibucket(Configurable):
         reuse = True
       with tf.variable_scope(self.name+'-multibucket', reuse=reuse):
         embeddings.append(bucket(vocab, keep_prob=keep_prob, moving_params=moving_params))
-    return tf.nn.embedding_lookup(embeddings, self.placeholder, partition_strategy='div')
+    return tf.nn.embedding_lookup(tf.concat(embeddings, axis=0), self.placeholder)
   
   #=============================================================
   def generate_placeholder(self):

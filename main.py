@@ -53,7 +53,8 @@ def train(save_dir, **kwargs):
   try:
     if not load and os.path.isdir(save_dir):
       raw_input('Save directory already exists. Press <Enter> to continue or <Ctrl-c> to abort.')
-      os.remove(os.path.join(save_dir, 'config.cfg'))
+      if os.path.isfile(os.path.join(save_dir, 'config.cfg')):
+        os.remove(os.path.join(save_dir, 'config.cfg'))
   except KeyboardInterrupt:
     print()
     sys.exit(0)
@@ -75,6 +76,7 @@ for section_name in section_names:
 def parse(save_dir, **kwargs):
   """"""
   
+  kwargs['config_file'] = os.path.join(save_dir, 'config.cfg')
   files = kwargs.pop('files')
   network = Network(**kwargs)
   network.parse(files)
@@ -83,9 +85,9 @@ def parse(save_dir, **kwargs):
 
 parse_parser = subparsers.add_parser('parse')
 parse_parser.set_defaults(action=parse)
+parse_parser.add_argument('files', nargs='+')
 for section_name in section_names:
   parse_parser.add_argument('--'+section_name, nargs='+')
-parse_parser.add_argument('files', nargs='+')
 
 #***************************************************************
 # Parse the arguments

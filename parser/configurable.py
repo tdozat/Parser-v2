@@ -52,14 +52,13 @@ class Configurable(object):
     else:
       self._config = self._configure(*args, **kwargs)
     
+    # We weren't passed in a configparser
     if not args:
       if not os.path.isdir(self.save_dir):
         os.makedirs(self.save_dir)
       
-      config_file = os.path.join(self.save_dir, 'config.cfg')
-      if not os.path.isfile(config_file):
-        with open(config_file, 'w') as f:
-          self._config.write(f)
+      with open(os.path.join(self.save_dir, 'config.cfg'), 'w') as f:
+        self._config.write(f)
     return
   
   #=============================================================
@@ -73,22 +72,28 @@ class Configurable(object):
         config.add_section(section)
         for option in old_config.options(section):
           config.set(section, option, old_config.get(section, option))
-    config_files = [os.path.join('config', 'defaults.cfg'),
-                    kwargs.pop('config_file', '')]
-    config.read(config_files)
-    config_sections = {section.lower().replace(' ', '_'): section for section in config.sections()}
-    config_sections['default'] = 'DEFAULT'
+    else:
+      config_files = [os.path.join('config', 'defaults.cfg'),
+                      kwargs.pop('config_file', '')]
+      config.read(config_files)
     # argparse syntax should be --section_name option1=value1 option2=value2
     # kwarg syntax should be section_name={option1: value1, option2: value2}
     # or option1=value1, option2=value2
+    config_sections = {section.lower().replace(' ', '_'): section for section in config.sections()}
+    config_sections['default'] = 'DEFAULT'
+    config_options = set()
+    for section in config.sections():
+      config_options.update(config.options(section))
     for kw, arg in kwargs.iteritems():
       if isinstance(arg, dict):
         section = config_sections[kw]
         for option, value in arg.iteritems():
+          assert option in config_options
           config.set(section, option, str(value))
       else:
         option, value = kw, arg
         section = re.sub('\B([A-Z][a-z])', r' \1', self.__class__.__name__)
+        assert option in config_options
         config.set(section, option, str(value))
     return config
   
@@ -203,9 +208,9 @@ class Configurable(object):
     from parser.neural.models import embeds
     return getattr(embeds, self.get('embed_model'))
   @property
-  def parser_model(self):
-    from parser.neural.models import parsers 
-    return getattr(parsers, self.get('parser_model'))
+  def nlp_model(self):
+    from parser.neural.models import nlp
+    return getattr(nlp, self.get('nlp_model'))
   
   #=============================================================
   # [Pretrained Vocab]

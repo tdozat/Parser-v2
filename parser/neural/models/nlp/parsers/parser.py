@@ -22,7 +22,7 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
-from parser.neural.models.parsers.base_parser import BaseParser
+from parser.neural.models.nlp.parsers.base_parser import BaseParser
 
 #***************************************************************
 class Parser(BaseParser):

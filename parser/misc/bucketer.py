@@ -89,7 +89,7 @@ class Bucketer(Configurable):
       self.recenter()
       i += 1
     if self.verbose:
-      print(color_pattern('Final # of tokens in buckets:', str(self.size()), 'bright_green'))
+      print(color_pattern('Final # of tokens in buckets:', str(self.size()), 'bright_white'))
     
     self.reindex()
     return self._splits

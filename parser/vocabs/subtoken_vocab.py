@@ -146,15 +146,14 @@ class SubtokenVocab(TokenVocab):
     indices = self.multibucket.indices[uniq]
     for bkt_idx, bucket in enumerate(self.multibucket):
       where = np.where(indices['bkt_idx'] == bkt_idx)[0]
-      unsorted.append(where)
       idxs = indices[where]['idx']
       bucket_data = bucket.indices[idxs]
       # these placeholders store the bucket data's index into the vocab's subtoken matrix
       if bucket_data.shape[0]:
+        unsorted.append(where)
         feed_dict[bucket.placeholder] = bucket_data
       else:
-        print('No data in bucket')
-        feed_dict[bucket.placeholder] = bucket_data[0:1,0:1]
+        feed_dict[bucket.placeholder] = bucket.indices[0:1]
     # this placeholder makes sure the on-the-fly embedding matrix is in the right order
     feed_dict[self.multibucket.placeholder] = np.argsort(np.concatenate(unsorted))
     return
@@ -195,7 +194,7 @@ class SubtokenVocab(TokenVocab):
         self._cased = value.cased
       elif self.cased != value.cased:
         cls = value.__class__
-        value = cls.from_configurable(value, value.conll_idx,
+        value = cls.from_configurable(value,
                                       cased=self.cased,
                                       recount=True)
     super(SubtokenVocab, self).__setattr__(name, value)

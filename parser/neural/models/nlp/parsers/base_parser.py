@@ -105,7 +105,7 @@ class BaseParser(NN):
     strings.append(color_pattern('UAS:', '{UAS:5.2f}%', 'bright_cyan'))
     strings.append(color_pattern('LAS:', '{LAS:5.2f}%', 'bright_cyan'))
     strings.append(color_pattern('SS:', '{SS:5.2f}%', 'bright_green'))
-    strings.append(color_pattern('Speed:', '{Seq_rate:6.1f} seqs/sec', 'bright_yellow'))
+    strings.append(color_pattern('Speed:', '{Seq_rate:6.1f} seqs/sec', 'bright_magenta'))
     string = ctext('{0}  ', 'bold') + ' | '.join(strings)
     print(string.format(prefix, **acc_dict))
     return
@@ -152,16 +152,15 @@ class BaseParser(NN):
         weights[0] = 0
         arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
         arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
-        rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=0)
+        rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=1)
         for token, arc_pred, rel_pred, weight in zip(sent, arc_preds[1:], rel_preds[1:], weights[1:]):
           token = list(token)
           token.insert(5, '_')
           token.append('_')
           token.append('_')
-          if weight:
-            tokens[6] = self.vocabs['heads'][arc_pred]
-            tokens[7] = self.vocabs['rels'][rel_pred]
-            f.write('\t'.join(token)+'\n')
+          token[6] = self.vocabs['heads'][arc_pred]
+          token[7] = self.vocabs['rels'][rel_pred]
+          f.write('\t'.join(token)+'\n')
         f.write('\n')
     return
   
