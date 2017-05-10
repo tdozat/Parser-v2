@@ -67,7 +67,7 @@ class PretrainedVocab(BaseVocab):
     """"""
     
     embeddings = []
-    start_idx = len(self.special_tokens)
+    cur_idx = len(self.special_tokens)
     max_rank = self.max_rank
     if self.filename.endswith('.xz'):
       open_func = lzma.open
@@ -82,10 +82,13 @@ class PretrainedVocab(BaseVocab):
           line = line.rstrip().split(' ')
           if len(line) > 1:
             embeddings.append(np.array(line[1:], dtype=np.float32))
-            self[line[0]] = start_idx + line_num
+            self[line[0]] = cur_idx
+            cur_idx += 1
         else:
           break
     try:
+      embeddings = np.stack(embeddings)
+      embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
       self.embeddings = np.stack(embeddings)
     except:
       shapes = set([embedding.shape for embedding in embeddings])

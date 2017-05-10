@@ -89,7 +89,7 @@ class BaseTagger(NN):
     acc_dict = self.process_accumulators(accumulators)
     for key, value in acc_dict.iteritems():
       history[key].append(value)
-    return
+    return history['TS'][-1]
   
   #=============================================================
   def print_accuracy(self, accumulators, time, prefix='Train'):

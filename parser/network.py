@@ -78,7 +78,6 @@ class Network(Configurable):
   def train(self, load=False):
     """"""
     
-    
     # prep the configurables
     self.add_file_vocabs(self.parse_files)
     trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
@@ -92,12 +91,18 @@ class Network(Configurable):
       valid_tensors = validset(moving_params=self.optimizer)
     valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
     valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
+    current_acc = 0
+    best_acc = 0
+    n_iters_since_improvement = 0
+    n_iters_in_epoch = 0
     
     # calling these properties is inefficient so we save them in separate variables
+    min_train_iters = self.min_train_iters
     max_train_iters = self.max_train_iters
     validate_every = self.validate_every
     save_every = self.save_every
     verbose = self.verbose
+    quit_after_n_iters_without_improvement = self.quit_after_n_iters_without_improvement
     
     # load or prep the history
     if load:
@@ -126,6 +131,7 @@ class Network(Configurable):
           batch_time = time.time() - start_time
           # update accumulators
           total_train_iters += 1
+          n_iters_since_improvement += 1
           train_accumulators += batch_values
           train_time += batch_time
           # possibly validate
@@ -144,7 +150,7 @@ class Network(Configurable):
                 validset.check(valid_preds, sents, f)
             # update history
             trainset.update_history(self.history['train'], train_accumulators)
-            validset.update_history(self.history['valid'], valid_accumulators)
+            current_acc = validset.update_history(self.history['valid'], valid_accumulators)
             # print
             if verbose:
               print(ctext('{0:6d}'.format(int(total_train_iters)), 'bold')+')') 
@@ -152,22 +158,29 @@ class Network(Configurable):
               validset.print_accuracy(valid_accumulators, valid_time)
             train_accumulators = np.zeros(len(train_outputs))
             train_time = 0
-        # We've completed one epoch
-        sess.run(self.global_epoch.assign_add(1.))
-        # possibly save
-        if save_every and (total_train_iters % save_every == 0):
-          saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
-                     global_step=self.global_epoch,
-                     write_meta_graph=False)
-          with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
-            pkl.dump(dict(self.history), f)
-      # definitely save
-      saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
-                 global_step=self.global_epoch,
-                 write_meta_graph=False)
-      with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
-        pkl.dump(dict(self.history), f)
-
+            if current_acc > best_acc:
+              if verbose:
+                print(ctext('Saving model...', 'bright_yellow'))
+              best_acc = current_acc
+              n_iters_since_improvement = 0
+              saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
+                         #global_step=self.global_epoch,
+                         write_meta_graph=False)
+              with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
+                pkl.dump(dict(self.history), f)
+            elif n_iters_since_improvement >= quit_after_n_iters_without_improvement and total_train_iters > min_train_iters:
+              break
+        else:
+          # We've completed one epoch
+          if total_train_iters <= min_train_iters:
+            saver.save(sess, os.path.join(self.save_dir, self.name.lower()),
+                       #global_step=self.global_epoch,
+                       write_meta_graph=False)
+            with open(os.path.join(self.save_dir, 'history.pkl'), 'w') as f:
+              pkl.dump(dict(self.history), f)
+          sess.run(self.global_epoch.assign_add(1.))
+          continue
+        break
       # Now parse the training and testing files
       input_files = self.train_files + self.parse_files
       for input_file in input_files:
@@ -192,11 +205,13 @@ class Network(Configurable):
     return
   
   #=============================================================
-  def parse(self, input_files, output_dir=None):
+  def parse(self, input_files, output_dir=None, output_file=None):
     """"""
     
     if not isinstance(input_files, (tuple, list)):
-      input_file = [input_files]
+      input_files = [input_files]
+    if len(input_files) > 1 and output_file is not None:
+      raise ValueError('Cannot provide a value for --output_file when parsing multiple files')
     self.add_file_vocabs(input_files)
     
     # load the model and prep the parse set
@@ -224,12 +239,14 @@ class Network(Configurable):
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
 
         input_dir, input_file = os.path.split(input_file)
-        if output_dir is None:
+        if output_dir is None and output_file is None:
           output_dir = self.save_dir
-        if output_dir == input_dir:
-          output_file = 'parsed-'+input_file
+        if output_dir == input_dir and output_file is None:
+          output_path = os.path.join(input_dir, 'parsed-'+input_file)
+        elif output_file is None:
+          output_path = os.path.join(output_dir, input_file)
         else:
-          output_file = input_file
+          output_path = output_file
         
         start_time = time.time()
         probs = []
@@ -237,7 +254,7 @@ class Network(Configurable):
         for feed_dict, tokens in parseset.iterbatches(shuffle=False):
           probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
           sents.append(tokens)
-        parseset.write_probs(sents, os.path.join(output_dir, output_file), probs)
+        parseset.write_probs(sents, output_path, probs)
     if self.verbose:
       print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
     return

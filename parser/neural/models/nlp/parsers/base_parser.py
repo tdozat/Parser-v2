@@ -92,7 +92,7 @@ class BaseParser(NN):
     acc_dict = self.process_accumulators(accumulators)
     for key, value in acc_dict.iteritems():
       history[key].append(value)
-    return
+    return history['LAS'][-1]
   
   #=============================================================
   def print_accuracy(self, accumulators, time, prefix='Train'):

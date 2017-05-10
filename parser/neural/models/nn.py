@@ -47,9 +47,12 @@ class NN(Configurable):
     return
   
   #=============================================================
-  def embed_concat(self, vocabs):
+  def embed_concat(self, vocabs, vocabs_to_merge=[['words', 'lemmas'], ['tags', 'xtags']]):
     """"""
     
+    merge_dict = {vocab.name:vocab.name for vocab in vocabs}
+    for vocab1, vocab2 in vocabs_to_merge:
+      merge_dict[vocab2] = vocab1
     if self.moving_params is None:
       placeholders = []
       drop_masks = []
@@ -57,19 +60,27 @@ class NN(Configurable):
         placeholder = vocab.generate_placeholder()
         if len(placeholder.get_shape().as_list()) == 3:
           placeholder = tf.unstack(placeholder, axis=2)[0]
-        drop_mask = tf.expand_dims(linalg.random_mask(vocab.embed_keep_prob, tf.shape(placeholder)), 2)
         placeholders.append(placeholder)
-        drop_masks.append(drop_mask)
+        if merge_dict[vocab.name] == vocab.name:
+          drop_mask = tf.expand_dims(linalg.random_mask(vocab.embed_keep_prob, tf.shape(placeholder)), 2)
+          drop_masks.append(drop_mask)
       total_masks = tf.add_n(drop_masks)
       scale_mask = len(drop_masks) / tf.maximum(total_masks, 1.)
-      embeddings = []
-      for vocab, placeholder, drop_mask in zip(vocabs, placeholders, drop_masks):
-        # n x b x d
-        embedding = vocab(placeholder)
-        embedding *= drop_mask*scale_mask
+    embed_dict = {}
+    for vocab in vocabs:
+      if merge_dict[vocab.name] in embed_dict:
+        embed_dict[merge_dict[vocab.name]] += vocab(moving_params=self.moving_params)
+      else:
+        embed_dict[merge_dict[vocab.name]] = vocab(moving_params=self.moving_params)
+    embeddings = []
+    i = 0
+    for vocab in vocabs:
+      if vocab.name in embed_dict:
+        embedding = embed_dict[vocab.name]
+        if self.moving_params is None:
+          embedding *= drop_masks[i]*scale_mask
         embeddings.append(embedding)
-    else:
-      embeddings = [vocab(moving_params=self.moving_params) for vocab in vocabs]
+        i += 1
     return tf.concat(embeddings, 2)
   
   #=============================================================

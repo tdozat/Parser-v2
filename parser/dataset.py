@@ -146,24 +146,19 @@ class Dataset(Configurable):
   
   #=============================================================
   def update_history(self, history, accumulators):
-    self._nlp_model.update_history(history, accumulators)
-    return
+    return self._nlp_model.update_history(history, accumulators)
   
   def print_accuracy(self, accumulators, time):
-    self._nlp_model.print_accuracy(accumulators, time, prefix=self.PREFIX.title())
-    return
+    return self._nlp_model.print_accuracy(accumulators, time, prefix=self.PREFIX.title())
   
   def write_probs(self, sents, output_file, probs):
-    self._nlp_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs())
-    return
+    return self._nlp_model.write_probs(sents, output_file, probs, self.multibucket.inv_idxs())
 
   def check(self, preds, sents, fileobj):
-    self._nlp_model.check(preds, sents, fileobj)
-    return
+    return self._nlp_model.check(preds, sents, fileobj)
   
   def plot(self, history):
-    self._nlp_model.plot(history)
-    return
+    return self._nlp_model.plot(history)
   
   #=============================================================
   @property

@@ -24,6 +24,7 @@ import tensorflow as tf
 
 from parser import Configurable
 from parser import Bucket
+from parser.misc.colors import ctext
 
 #***************************************************************
 class Multibucket(Configurable):
@@ -129,7 +130,7 @@ class Multibucket(Configurable):
     multibucket._buckets = buckets
     if dataset.verbose:
       for bucket in multibucket:
-        print('Bucket {name} is {shape}'.format(name=bucket.name, shape=' x '.join(str(x) for x in bucket.indices.shape)))
+        print('Bucket {name} is {shape}'.format(name=bucket.name, shape=ctext(' x '.join(str(x) for x in bucket.indices.shape), 'bright_blue')))
     return multibucket
   
   #=============================================================

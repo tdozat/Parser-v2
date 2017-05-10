@@ -93,6 +93,7 @@ class Configurable(object):
       else:
         option, value = kw, arg
         section = re.sub('\B([A-Z][a-z])', r' \1', self.__class__.__name__)
+        section = re.sub('([a-z])([A-Z])', r'\1 \2', section)
         assert option in config_options
         config.set(section, option, str(value))
     return config
@@ -109,8 +110,9 @@ class Configurable(object):
   def _get(self, config_func, option):
     superclasses = [superclass.__name__ for superclass in self.__class__.__mro__]
     superclasses[-1] = 'DEFAULT'
-    for superclass in superclasses:
-      superclass = re.sub('\B([A-Z][a-z])', r' \1', superclass)
+    for i, superclass in enumerate(superclasses):
+      superclasses[i] = superclass = re.sub('\B([A-Z][a-z])', r' \1', superclass)
+      superclasses[i] = superclass = re.sub('([a-z])([A-Z])', r'\1 \2', superclass)
       if self._config.has_section(superclass) and self._config.has_option(superclass, option):
         return None if self._config.get(superclass, option) == 'None' else config_func(superclass, option)
     raise NoOptionError(option, superclasses)
@@ -322,6 +324,9 @@ class Configurable(object):
   #=============================================================
   # [Network]
   @property
+  def min_train_iters(self):
+    return self.getint('min_train_iters')
+  @property
   def max_train_iters(self):
     return self.getint('max_train_iters')
   @property
@@ -339,6 +344,9 @@ class Configurable(object):
   @property
   def save_every(self):
     return self.getint('save_every')
+  @property
+  def quit_after_n_iters_without_improvement(self):
+    return self.getint('quit_after_n_iters_without_improvement')
   @property
   def per_process_gpu_memory_fraction(self):
     return self.getfloat('per_process_gpu_memory_fraction')
