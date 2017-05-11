@@ -45,6 +45,10 @@ class Configurable(object):
     if args:
       if len(args) > 1:
         raise TypeError('Configurables take at most one argument')
+
+    is_eval = ('is_evaluation' in kwargs and kwargs['is_evaluation'])
+    if is_eval:
+      del kwargs['is_evaluation']
     
     self._name = kwargs.pop('name', None)
     if args and not kwargs:
@@ -53,7 +57,7 @@ class Configurable(object):
       self._config = self._configure(*args, **kwargs)
     
     # We weren't passed in a configparser
-    if not args:
+    if not args and not is_eval:
       if not os.path.isdir(self.save_dir):
         os.makedirs(self.save_dir)
       
