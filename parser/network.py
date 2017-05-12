@@ -45,17 +45,23 @@ class Network(Configurable):
     
     super(Network, self).__init__(*args, **kwargs)
     # hacky!
-    hacky_train_files = op.join(self.save_dir, op.basename(self.get("train_files")))
-    self._config.set('Configurable', 'train_files', hacky_train_files)
+    #hacky_train_files = op.join(self.save_dir, op.basename(self.get("train_files")))
+    #self._config.set('Configurable', 'train_files', hacky_train_files)
     
     # TODO make this more flexible, maybe specify it in config?
+    temp_nlp_model = self.nlp_model.from_configurable(self)
+    if temp_nlp_model.input_vocabs == ['tags']:
+      word_vocab = WordVocab.from_configurable(self)
+      word_multivocab = Multivocab.from_configurable(self, [word_vocab], name=word_vocab.name)
+      tag_vocab = TagVocab.from_configurable(self, initialize_zero=False)
+    else:
+      word_vocab = WordVocab.from_configurable(self)
+      pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
+      subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
+      word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
+      tag_vocab = TagVocab.from_configurable(self)
     dep_vocab = DepVocab.from_configurable(self)
-    word_vocab = WordVocab.from_configurable(self)
-    pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
-    subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
-    word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
     lemma_vocab = LemmaVocab.from_configurable(self)
-    tag_vocab = TagVocab.from_configurable(self)
     xtag_vocab = XTagVocab.from_configurable(self)
     head_vocab = HeadVocab.from_configurable(self)
     rel_vocab = RelVocab.from_configurable(self)
