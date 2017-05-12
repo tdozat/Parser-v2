@@ -24,6 +24,7 @@ import time
 import codecs
 import cPickle as pkl
 from collections import defaultdict
+import os.path as op
 
 import numpy as np
 import tensorflow as tf
@@ -43,6 +44,9 @@ class Network(Configurable):
     """"""
     
     super(Network, self).__init__(*args, **kwargs)
+    # hacky!
+    hacky_train_files = op.join(self.save_dir, op.basename(self.get("train_files")))
+    self._config.set('Configurable', 'train_files', hacky_train_files)
     
     # TODO make this more flexible, maybe specify it in config?
     dep_vocab = DepVocab.from_configurable(self)

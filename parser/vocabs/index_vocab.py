@@ -61,7 +61,7 @@ class IndexVocab(Configurable):
   
   #=============================================================
   def index(self, token):
-    return int(token)
+    return 0 if token == '_' else int(token)
   
   #=============================================================
   @property
