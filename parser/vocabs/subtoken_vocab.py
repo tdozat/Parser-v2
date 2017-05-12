@@ -93,7 +93,7 @@ class SubtokenVocab(TokenVocab):
     with codecs.open(train_file, encoding='utf-8') as f:
       for line_num, line in enumerate(f):
         try:
-          line = line.strip()
+          line = line.rstrip()
           if line:
             line = line.split('\t')
             token, count, token_count = line
