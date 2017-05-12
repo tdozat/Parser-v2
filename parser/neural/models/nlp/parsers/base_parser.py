@@ -26,6 +26,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from parser.misc.colors import ctext, color_pattern
+from parser.misc.mst import nonprojective, argmax
 from parser.neural.models.nn import NN
 
 #***************************************************************
@@ -121,6 +122,7 @@ class BaseParser(NN):
     """"""
 
     for tokens, arc_preds, rel_preds in zip(sents, preds[0], preds[1]):
+      arc_preds = nonprojective(arc_preds, len(tokens)+1)
       for token, arc_pred, rel_pred in zip(zip(*tokens), arc_preds, rel_preds):
         arc = self.vocabs['heads'][arc_pred]
         rel = self.vocabs['rels'][rel_pred]
@@ -132,8 +134,6 @@ class BaseParser(NN):
   def write_probs(self, sents, output_file, probs, inv_idxs):
     """"""
     
-    # TODO implement argmax, projective, nonprojective
-    # Store the algorithms in a separate file that gets imported in Configurable
     #parse_algorithm = self.parse_algorithm 
     
     # Turns list of tuples of tensors into list of matrices
@@ -146,7 +146,8 @@ class BaseParser(NN):
       for i in inv_idxs:
         sent, arc_prob, rel_prob, weights = tokens[i], arc_probs[i], rel_probs[i], tokens_to_keep[i]
         sent = zip(*sent)
-        arc_preds = np.argmax(arc_prob, axis=1)
+        #arc_preds = np.argmax(arc_prob, axis=1)
+        arc_preds = nonprojective(arc_prob, int(np.sum(weights))+1)
         arc_preds_one_hot = np.zeros([rel_prob.shape[0], rel_prob.shape[2]])
         arc_preds_one_hot[np.arange(len(arc_preds)), arc_preds] = 1.
         rel_preds = np.argmax(np.einsum('nrb,nb->nr', rel_prob, arc_preds_one_hot), axis=1)
