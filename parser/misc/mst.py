@@ -58,7 +58,7 @@ def find_cycles(edges):
 def find_roots(edges):
   """"""
   
-  return np.where(edges[1:] == 0)[0]
+  return np.where(edges[1:] == 0)[0]+1
   
 #***************************************************************
 def argmax(probs):
@@ -141,13 +141,12 @@ def chu_liu_edmonds(probs):
   return edges
 
 #===============================================================
-def nonprojective(probs, sequence_length):
+def nonprojective(probs):
   """"""
   
   probs *= 1-np.eye(len(probs)).astype(np.float32)
   probs[0] = 0
   probs[0,0] = 1
-  probs[:,sequence_length:] = 0
   probs /= np.sum(probs, axis=1, keepdims=True)
   
   #edges = chu_liu_edmonds(probs)
@@ -204,7 +203,6 @@ if __name__ == '__main__':
       probs_ = make_root(probs, root)
       edges_ = nonprojective(probs_)
       score = score_edges(probs_, edges_)
-      print(score)
       if score > best_score:
         best_edges = edges_
         best_score = score
