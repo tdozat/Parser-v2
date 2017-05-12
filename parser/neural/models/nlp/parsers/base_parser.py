@@ -142,6 +142,7 @@ class BaseParser(NN):
     tokens = [sent for batch in sents for sent in batch]
     
     with codecs.open(output_file, 'w', encoding='utf-8', errors='ignore') as f:
+      j = 0
       for i in inv_idxs:
         sent, arc_prob, rel_prob, weights = tokens[i], arc_probs[i], rel_probs[i], tokens_to_keep[i]
         sent = zip(*sent)
@@ -160,7 +161,9 @@ class BaseParser(NN):
           token[6] = self.vocabs['heads'][arc_pred]
           token[7] = self.vocabs['rels'][rel_pred]
           f.write('\t'.join(token)+'\n')
-        f.write('\n')
+        j += 1
+        if j < len(inv_idxs):
+          f.write('\n')
     return
   
   #=============================================================
