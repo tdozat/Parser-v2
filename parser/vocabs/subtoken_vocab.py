@@ -89,7 +89,8 @@ class SubtokenVocab(TokenVocab):
   def load(self):
     """"""
     
-    with codecs.open(os.path.join(self.save_dir, self.name+'.txt'), encoding='utf-8') as f:
+    train_file = os.path.join(self.save_dir, self.name+'.txt')
+    with codecs.open(train_file, encoding='utf-8') as f:
       for line_num, line in enumerate(f):
         try:
           line = line.strip()
