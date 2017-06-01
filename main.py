@@ -67,6 +67,7 @@ def train(save_dir, **kwargs):
 train_parser = subparsers.add_parser('train')
 train_parser.set_defaults(action=train)
 train_parser.add_argument('--load', action='store_true')
+train_parser.add_argument('--config_file')
 for section_name in section_names:
   train_parser.add_argument('--'+section_name, nargs='+')
 
