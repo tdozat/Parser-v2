@@ -28,7 +28,7 @@ from backports import lzma
 import numpy as np
 from numpy.linalg import inv
 import matplotlib.pyplot as plt
-from collections import defaultdict
+from collections import Counter
 
 #***************************************************************
 if __name__ == '__main__':
@@ -36,30 +36,32 @@ if __name__ == '__main__':
   
   parser = argparse.ArgumentParser()
   parser.add_argument('-k', '--k_trials', type=int, default=100)
-  parser.add_argument('-n', '--n_words', type=int, default=1000)
+  parser.add_argument('-n', '--n_words', type=int, default=5000)
   parser.add_argument('files', nargs='+')
   
   args = parser.parse_args()
-  words = []
-  types = set()
-  n_types = []
+  type_counter = Counter()
   for filename in args.files:
     with codecs.open(filename, encoding='utf-8', errors='ignore') as f:
       for line in f:
         line = line.strip()
         if line:
           if not re.match('#|[0-9]+[-.][0-9]+', line):
-            words.append(line.split('\t')[1])
+            type_counter[line.split('\t')[1]] += 1
+  
+  types = type_counter.keys()
+  total = sum(type_counter.values())
+  probs = [type_counter[type_] / total for type_ in types]
+  
   trials = []
-  n_words = args.n_words or len(words)
+  n_words = min(args.n_words, len(types)) or len(types)
   for _ in xrange(args.k_trials):
-    np.random.shuffle(words)
-    tokens = words[:args.n_words]
+    chosen_types = np.random.choice(types, size=n_words, replace=False, p=probs)
     with codecs.open('uncompressed.txt', 'w', encoding='utf-8', errors='ignore') as f:
-      f.write('\n'.join(tokens))
+      f.write('\n'.join(chosen_types))
     with lzma.open('compressed.txt.xz', 'wb') as f:
-      f.write('\n'.join(tokens).encode('utf-8', 'ignore'))
+      f.write('\n'.join(chosen_types).encode('utf-8', 'ignore'))
     trials.append(os.path.getsize('compressed.txt.xz')/os.path.getsize('uncompressed.txt'))
   os.remove('uncompressed.txt')
   os.remove('compressed.txt.xz')
-  print(len(words), np.mean(trials))
+  print(np.mean(trials))

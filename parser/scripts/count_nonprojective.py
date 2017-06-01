@@ -96,4 +96,4 @@ if __name__ == '__main__':
           tree = DepTree(buff)
           nonproj.extend(tree.count_nonprojective())
           buff = []
-    print(filename, np.mean(nonproj)*100)
+    print(np.mean(nonproj))
