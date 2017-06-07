@@ -22,56 +22,57 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
-from parser.neural.models.parsers.base_parser import BaseParser
+from parser.neural.models.nlp.parsers.base_parser import BaseParser
 
 #***************************************************************
-class FishParser(BaseParser):
+class GamaParser(BaseParser):
   """"""
   
   #=============================================================
   def __call__(self, vocabs, moving_params=None):
     """"""
     
-    top_recur = super(Parser, self).__call__(vocabs, moving_params=moving_params)
+    top_recur = super(GamaParser, self).__call__(vocabs, moving_params=moving_params)
+    int_tokens_to_keep = tf.to_int32(self.tokens_to_keep)
     
     with tf.variable_scope('MLP'):
       dep_mlp, head_mlp = self.MLP(top_recur, self.arc_mlp_size + self.rel_mlp_size + 2*self.p_mlp_size,
                                    n_splits=2)
-      arc_dep_mlp, rel_dep_mlp, p_dep_mlp, r_dep_mlp = tf.split(dep_mlp, [self.arc_mlp_size, self.rel_mlp_size, self.p_mlp_size, self.r_mlp_size], axis=2)
-      arc_head_mlp, rel_head_mlp, mu_head_mlp = tf.split(head_mlp, [self.arc_mlp_size, self.rel_mlp_size, self.p_mlp_size, self.r_mlp_size], axis=2)
+      arc_dep_mlp, rel_dep_mlp, mu_dep_mlp, sigma_dep_mlp = tf.split(dep_mlp, [self.arc_mlp_size, self.rel_mlp_size, self.p_mlp_size, self.p_mlp_size], axis=2)
+      arc_head_mlp, rel_head_mlp, mu_head_mlp, sigma_head_mlp = tf.split(head_mlp, [self.arc_mlp_size, self.rel_mlp_size, self.p_mlp_size, self.p_mlp_size], axis=2)
     
-    with tf.variable_scope('p'):
-      # (n x b x d) o (d x 1 x d) o (n x b x d).T -> (n x b x b)
-      arc_ps = tf.exp(self.bilinear(mu_dep_mlp, mu_head_mlp, 1))
-    with tf.variable_scope('r'):
-      # (n x b x d) o (d x 1 x d) o (n x b x d).T -> (n x b x b)
-      arc_rs = tf.nn.sigmoid(self.bilinear(mu_dep_mlp, mu_head_mlp, 1))
+    with tf.variable_scope('dist'):
+      with tf.variable_scope('mu'):
+        # (n x b x d) o (d x 1 x d) o (n x b x d).T -> (n x b x b)
+        arc_mus = self.bilinear(mu_dep_mlp, mu_head_mlp, 1)**2
+      with tf.variable_scope('sigma'):
+        # (n x b x d) o (d x 1 x d) o (n x b x d).T -> (n x b x b)
+        arc_sigmas = self.bilinear(sigma_dep_mlp, sigma_head_mlp, 1, initializer=None)**2 + .1
+      # (b x 1)
+      i_mat = tf.expand_dims(tf.range(self.bucket_size), 1)
+      # (1 x b)
+      j_mat = tf.expand_dims(tf.range(self.bucket_size), 0)
+      # (b x 1) - (1 x b) -> (b x b)
+      k_mat = tf.to_float(tf.abs(i_mat - j_mat))
+      
+      arc_logits = -.5*tf.log(2*np.pi * arc_sigmas) - .5*(k_mat-arc_mus)**2 / arc_sigmas
+      #arc_rs += tf.to_float(k_mat)#tf.to_float(tf.expand_dims(tf.expand_dims(self.sequence_lengths, 1), 1))
+      # (b x 1)
+      #n_mat = tf.expand_dims(self.sequence_lengths, 1) - 1 - i_mat
+      # (b x b) * (n x b x b) - (n x b x b) - (b x b) -> (n x b x b)
+      #arc_logits = (tf.lgamma(arc_rs+1) - tf.lgamma(k_mat) - tf.lgamma(arc_rs-k_mat+2) +
+      #               k_mat * tf.log(arc_ps) + (arc_rs-k_mat+1)*tf.log(1-arc_ps) )
     with tf.variable_scope('Arc'):
       # (n x b x d) o (d x 1 x d) o (n x b x d).T -> (n x b x b)
-      arc_logits = self.bilinear(arc_dep_mlp, arc_head_mlp, 1, add_bias2=False, add_bias=False)
-      # (b x 1)
-      i_mat = tf.expand_dims(tf.range(self.batch_size), 1)
-      # (1 x b)
-      j_mat = tf.expand_dims(tf.range(self.batch_size), 0)
-      # (b x 1) - (1 x b) -> (b x b)
-      k_mat = tf.abs(i_mat - j_mat)
-      # (b x 1)
-      n_mat = tf.expand_dims(self.sequence_lengths, 1) - 1 - i_mat
-      # (b x b) * (n x b x b) - (n x b x b) - (b x b) -> (n x b x b)
-      arc_logits += (tf.lgamma(k_mat + arc_rs-1) - tf.lgamma(k_mat) - tf.lgamma(arc_rs) +
-                     arc_rs * tf.log(1-arc_ps) + (k_mat-1)*tf.log(arc_ps) )
-      # (n x b x b) - ((b x b) + (b x b)) -> (n x b x b)
-      arc_logits -= tf.log(
-        tf.to_float(k_mat < i_mat) +
-        tf.to_float(k_mat < n_mat) )
+      arc_logits += self.bilinear(arc_dep_mlp, arc_head_mlp, 1, add_bias2=False)
       # (n x b x b)
       arc_probs = tf.nn.softmax(arc_logits)
       # (n x b)
-      arc_preds = tf.argmax(arc_logits, axis=-1)
+      arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
       # (n x b)
       arc_targets = self.vocabs['heads'].placeholder
       # (n x b)
-      arc_correct = tf.to_float(tf.equal(arc_preds, arc_targets))*self.tokens_to_keep
+      arc_correct = tf.to_int32(tf.equal(arc_preds, arc_targets))*int_tokens_to_keep
       # ()
       arc_loss = tf.losses.sparse_softmax_cross_entropy(arc_targets, arc_logits, self.tokens_to_keep)
     
@@ -79,7 +80,7 @@ class FishParser(BaseParser):
       # (n x b x d) o (d x r x d) o (n x b x d).T -> (n x b x r x b)
       rel_logits = self.bilinear(rel_dep_mlp, rel_head_mlp, len(self.vocabs['rels']))
       # (n x b x r x b)
-      rel_probs = tf.nn.softmax(rel_logits)
+      rel_probs = tf.nn.softmax(rel_logits, dim=2)
       # (n x b x b)
       one_hot = tf.one_hot(arc_preds if moving_params is not None else arc_targets, self.bucket_size)
       # (n x b x b) -> (n x b x b x 1)
@@ -89,24 +90,27 @@ class FishParser(BaseParser):
       # (n x b x r x 1) -> (n x b x r)
       select_rel_logits = tf.squeeze(select_rel_logits, axis=3)
       # (n x b)
-      rel_preds = tf.argmax(select_rel_logits, axis=-1)
+      rel_preds = tf.to_int32(tf.argmax(select_rel_logits, axis=-1))
       # (n x b)
       rel_targets = self.vocabs['rels'].placeholder
       # (n x b)
-      rel_correct = tf.to_float(tf.equal(rel_preds * rel_targets))*self.tokens_to_keep
+      rel_correct = tf.to_int32(tf.equal(rel_preds, rel_targets))*int_tokens_to_keep
       # ()
       rel_loss = tf.losses.sparse_softmax_cross_entropy(rel_targets, select_rel_logits, self.tokens_to_keep)
     
-    n_correct = tf.reduce_sum(arc_correct * rel_correct)
     n_arc_correct = tf.reduce_sum(arc_correct)
     n_rel_correct = tf.reduce_sum(rel_correct)
+    correct = arc_correct * rel_correct
+    n_correct = tf.reduce_sum(correct)
+    n_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(correct, axis=1), self.sequence_lengths-1)))
     loss = arc_loss + rel_loss
     
     outputs = {
       'arc_logits': arc_logits,
       'arc_mus': arc_mus,
+      'arc_sigmas': arc_sigmas,
       'arc_probs': arc_probs,
-      'arc_pred': arc_preds,
+      'arc_preds': arc_preds,
       'arc_targets': arc_targets,
       'arc_correct': arc_correct,
       'arc_loss': arc_loss,
@@ -121,8 +125,10 @@ class FishParser(BaseParser):
       'n_rel_correct': n_rel_correct,
       
       'n_tokens': self.n_tokens,
+      'n_seqs': self.batch_size,
       'tokens_to_keep': self.tokens_to_keep,
       'n_correct': n_correct,
+      'n_seqs_correct': n_seqs_correct,
       'loss': loss
     }
     

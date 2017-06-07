@@ -59,6 +59,7 @@ class Network(Configurable):
       pretrained_vocab = PretrainedVocab.from_vocab(word_vocab)
       subtoken_vocab = self.subtoken_vocab.from_vocab(word_vocab)
       word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab, subtoken_vocab], name=word_vocab.name)
+      #word_multivocab = Multivocab.from_configurable(self, [word_vocab, pretrained_vocab], name=word_vocab.name)
       tag_vocab = TagVocab.from_configurable(self)
     dep_vocab = DepVocab.from_configurable(self)
     lemma_vocab = LemmaVocab.from_configurable(self)
@@ -193,6 +194,7 @@ class Network(Configurable):
         break
       # Now parse the training and testing files
       input_files = self.train_files + self.parse_files
+      saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       for input_file in input_files:
         parseset = Parseset.from_configurable(self, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
         with tf.variable_scope(self.name.title(), reuse=True):

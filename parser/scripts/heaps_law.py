@@ -59,13 +59,12 @@ if __name__ == '__main__':
   logx = np.log(x)
   d2ell = np.array([[1, np.mean(logx)],[np.mean(logx), np.mean(logx**2)]])
   d2ellinv = inv(d2ell)
-  for i in xrange(20):
-    ell = np.mean((logy - b*logx-K)**2 / 2)
-    dell = np.array([np.mean(K+b*logx-logy), np.mean((K+b*logx-logy)*logx)])
-    updates = d2ellinv.dot(dell)
-    K -= updates[0]
-    b -= updates[1]
-    print(ell, K, b)
+  ell = np.mean((logy - b*logx-K)**2 / 2)
+  dell = np.array([np.mean(K+b*logx-logy), np.mean((K+b*logx-logy)*logx)])
+  updates = d2ellinv.dot(dell)
+  K -= updates[0]
+  b -= updates[1]
+  print(b)
   #K_ = 5
   #b_ = .74
   #for i in xrange(20):
@@ -73,14 +72,14 @@ if __name__ == '__main__':
   #  K_ -= 2*np.mean((K_*x**b_-y)*x**b_) / np.mean(x**(2*b_))
   #  b_ -= 2*np.mean((K_*x**b_-y)*K_*x**b_*logx) / np.mean((2*K_*x**b_ - y)*K_*x**b_*logx**2)
   #  print(ell, K_, b_)
-  plt.figure()
-  plt.grid()
-  plt.plot(x, y)
-  plt.plot(x, np.exp(b*logx+K))
-  plt.show()
-  plt.figure()
-  plt.grid()
-  plt.plot(x, logy - b*logx-K)
+  #plt.figure()
+  #plt.grid()
+  #plt.plot(x, y)
+  #plt.plot(x, np.exp(b*logx+K))
+  #plt.show()
+  #plt.figure()
+  #plt.grid()
+  #plt.plot(x, logy - b*logx-K)
   #plt.show()
   #plt.figure()
   #plt.grid()

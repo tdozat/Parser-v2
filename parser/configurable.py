@@ -304,11 +304,17 @@ class Configurable(object):
   def tag_mlp_size(self):
     return self.getint('tag_mlp_size')
   @property
+  def p_mlp_size(self):
+    return self.getint('p_mlp_size')
+  @property
   def arc_mlp_size(self):
     return self.getint('arc_mlp_size')
   @property
   def rel_mlp_size(self):
     return self.getint('rel_mlp_size')
+  @property
+  def lambda_mlp_size(self):
+    return self.getint('lambda_mlp_size')
   @property
   def input_vocabs(self):
     return self.getlist('input_vocabs')
