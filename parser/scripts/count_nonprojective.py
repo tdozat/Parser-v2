@@ -56,7 +56,12 @@ class DepTree:
       span_max = max(dep, head)
       for mid_dep in xrange(span_min+1, span_max):
         mid_head = self.dep2head[mid_dep]
-        nonproj.append(mid_head < span_min or mid_head > span_max)
+        if mid_head < span_min or mid_head > span_max:
+          crossing = True
+          break
+      else:
+        crossing = False
+      nonproj.append(int(crossing))
     return nonproj
   
   #=============================================================
