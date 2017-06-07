@@ -22,7 +22,11 @@ from __future__ import print_function
 import os
 import codecs
 import gzip
-from backports import lzma
+import warnings
+try:
+  from backports import lzma
+except:
+  warnings.warn('Install backports.lzma for xz support')
 from collections import Counter
 
 import numpy as np
