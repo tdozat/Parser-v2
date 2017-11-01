@@ -244,29 +244,36 @@ class Network(Configurable):
       saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       
       # Iterate through files and batches
+      # (Hacky workaround to hopefully avoid memory issues)
+      default_graph = tf.get_default_graph()
+      default_graphdef = default_graph.as_graph_def()
       for input_file in input_files:
-        parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
-        with tf.variable_scope(self.name.title(), reuse=True):
-          parse_tensors = parseset(moving_params=self.optimizer)
-        parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
-
-        input_dir, input_file = os.path.split(input_file)
-        if output_dir is None and output_file is None:
-          output_dir = self.save_dir
-        if output_dir == input_dir and output_file is None:
-          output_path = os.path.join(input_dir, 'parsed-'+input_file)
-        elif output_file is None:
-          output_path = os.path.join(output_dir, input_file)
-        else:
-          output_path = output_file
-        
-        start_time = time.time()
-        probs = []
-        sents = []
-        for feed_dict, tokens in parseset.iterbatches(shuffle=False):
-          probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
-          sents.append(tokens)
-        parseset.write_probs(sents, output_path, probs)
+        with tf.Graph() as graph:
+          graph.import_graph_def(default_graphdef)
+          
+          parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+          with tf.variable_scope(self.name.title(), reuse=True):
+            parse_tensors = parseset(moving_params=self.optimizer)
+          parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
+          
+          input_dir, input_file = os.path.split(input_file)
+          if output_dir is None and output_file is None:
+            output_dir = self.save_dir
+          if output_dir == input_dir and output_file is None:
+            output_path = os.path.join(input_dir, 'parsed-'+input_file)
+          elif output_file is None:
+            output_path = os.path.join(output_dir, input_file)
+          else:
+            output_path = output_file
+          
+          start_time = time.time()
+          probs = []
+          sents = []
+          for feed_dict, tokens in parseset.iterbatches(shuffle=False):
+            probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
+            sents.append(tokens)
+          parseset.write_probs(sents, output_path, probs)
+          del parseset
     if self.verbose:
       print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
     return
