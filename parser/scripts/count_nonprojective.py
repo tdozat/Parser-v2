@@ -89,6 +89,7 @@ if __name__ == '__main__':
   
   args = parser.parse_args()
   for filename in args.files:
+    lang = re.search('([-\w]*)-ud', filename).group(1)
     nonproj = []
     with open(filename) as f:
       buff = []
@@ -101,4 +102,4 @@ if __name__ == '__main__':
           tree = DepTree(buff)
           nonproj.extend(tree.count_nonprojective())
           buff = []
-    print(filename, np.mean(nonproj)*100)
+    print(lang, np.mean(nonproj)*100)

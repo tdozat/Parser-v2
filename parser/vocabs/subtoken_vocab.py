@@ -61,11 +61,22 @@ class SubtokenVocab(TokenVocab):
     
     embed_dims = [len(self), self.embed_size]
     if initialize_zero:
-      self.embeddings = np.zeros(embed_dims)
+      self._embeddings_array = np.zeros(embed_dims)
     else:
-      self.embeddings = np.random.randn(*embed_dims)
+      self._embeddings_array = np.random.randn(*embed_dims)
     return
   
+  #=============================================================
+  def setup(self):
+    """"""
+
+    self.placeholder = None
+    with tf.device('/cpu:0'):
+      with tf.variable_scope(self.name.title()):
+        self._embeddings = tf.Variable(self._embeddings_array, name='Embeddings', dtype=tf.float32, trainable=True)
+    self._multibucket.reset_placeholders()
+    return
+
   #=============================================================
   def __call__(self, placeholder=None, moving_params=None):
     """"""

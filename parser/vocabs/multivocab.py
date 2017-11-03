@@ -58,6 +58,15 @@ class Multivocab(Configurable):
     return tf.add_n(embeddings)
   
   #=============================================================
+  def setup(self):
+    """"""
+
+    self.placeholder = None
+    for vocab in self:
+      vocab.setup()
+    return
+
+  #=============================================================
   def generate_placeholder(self):
     """"""
     

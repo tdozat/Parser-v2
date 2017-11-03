@@ -49,6 +49,7 @@ with codecs.open('config/defaults.cfg') as f:
 def train(save_dir, **kwargs):
   """"""
   
+  kwargs['config_file'] = kwargs.pop('config_file', '')
   load = kwargs.pop('load')
   try:
     if not load and os.path.isdir(save_dir):
@@ -58,7 +59,6 @@ def train(save_dir, **kwargs):
   except KeyboardInterrupt:
     print()
     sys.exit(0)
-  
   network = Network(**kwargs)
   network.train(load=load)
   return

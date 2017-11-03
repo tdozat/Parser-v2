@@ -64,6 +64,8 @@ class NN(Configurable):
         if merge_dict[vocab.name] == vocab.name:
           drop_mask = tf.expand_dims(linalg.random_mask(vocab.embed_keep_prob, tf.shape(placeholder)), 2)
           drop_masks.append(drop_mask)
+      for placeholder in placeholders:
+        print(placeholder.graph)
       total_masks = tf.add_n(drop_masks)
       scale_mask = len(drop_masks) / tf.maximum(total_masks, 1.)
     embed_dict = {}

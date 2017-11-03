@@ -59,6 +59,13 @@ class Multibucket(Configurable):
     return tf.nn.embedding_lookup(tf.concat(embeddings, axis=0), self.placeholder)
   
   #=============================================================
+  def reset_placeholders(self):
+    self.placeholder = None
+    for bucket in self:
+      bucket.reset_placeholders()
+    return
+
+  #=============================================================
   def generate_placeholder(self):
     """"""
     

@@ -67,6 +67,16 @@ class PretrainedVocab(BaseVocab):
     #return embeddings # changed in saves2/test8
   
   #=============================================================
+  def setup(self):
+    """"""
+
+    self.placeholder = None
+    with tf.device('/cpu:0'):
+      with tf.variable_scope(self.name.title()):
+        self._embeddings = tf.Variable(self._embeddings_array, name='Embeddings', dtype=tf.float32, trainable=False)
+    return
+    
+  #=============================================================
   def load(self):
     """"""
     
@@ -93,7 +103,8 @@ class PretrainedVocab(BaseVocab):
     try:
       embeddings = np.stack(embeddings)
       embeddings = np.pad(embeddings, ( (len(self.special_tokens),0), (0,0) ), 'constant')
-      self.embeddings = np.stack(embeddings)
+      self._embeddings_array = np.stack(embeddings)
+      self._embed_size = self._embeddings_array.shape[1]
     except:
       shapes = set([embedding.shape for embedding in embeddings])
       raise ValueError("Couldn't stack embeddings with shapes in %s" % shapes)
@@ -123,13 +134,13 @@ class PretrainedVocab(BaseVocab):
   @property
   def embeddings(self):
     return super(PretrainedVocab, self).embeddings
-  @embeddings.setter
-  def embeddings(self, matrix):
-    self._embed_size = matrix.shape[1]
-    with tf.device('/cpu:0'):
-      with tf.variable_scope(self.name.title()):
-        self._embeddings = tf.Variable(matrix, name='Embeddings', trainable=False)
-    return
+  #@embeddings.setter
+  #def embeddings(self, matrix):
+  #  self._embed_size = matrix.shape[1]
+  #  with tf.device('/cpu:0'):
+  #    with tf.variable_scope(self.name.title()):
+  #      self._embeddings = tf.Variable(matrix, name='Embeddings', trainable=False)
+  #  return
 
 #***************************************************************
 if __name__ == '__main__':

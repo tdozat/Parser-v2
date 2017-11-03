@@ -39,6 +39,11 @@ class BaseEmbed(NN):
     return
   
   #=============================================================
+  def reset_placeholders(self):
+    self.placeholder = None
+    return
+
+  #=============================================================
   def __call__(self, vocab, keep_prob=None, moving_params=None):
     """"""
     

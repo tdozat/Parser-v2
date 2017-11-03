@@ -56,10 +56,22 @@ class TokenVocab(BaseVocab):
     
     embed_dims = [len(self), self.embed_size]
     if initialize_zero:
-      self.embeddings = np.zeros(embed_dims)
+      self._embeddings_array = np.zeros(embed_dims)
     else:
-      self.embeddings = np.random.randn(*embed_dims)
+      self._embeddings_array = np.random.randn(*embed_dims)
     return
+  
+  #=============================================================
+  def setup(self):
+    """"""
+    
+    self.placeholder = None
+    del self._embeddings
+    with tf.device('/cpu:0'):
+      with tf.variable_scope(self.name.title()):
+        self._embeddings = tf.Variable(self._embeddings_array, name='Embeddings', dtype=tf.float32, trainable=True)
+    return
+
   
   #=============================================================
   def count(self, conll_files=None):

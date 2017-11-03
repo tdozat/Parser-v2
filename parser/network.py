@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gc
 import os
 import time
 import codecs
@@ -86,11 +87,20 @@ class Network(Configurable):
     return
   
   #=============================================================
+  def setup_vocabs(self):
+    """"""
+    
+    for vocab in self.vocabs:
+      vocab.setup()
+    return 
+  
+  #=============================================================
   def train(self, load=False):
     """"""
     
     # prep the configurables
     self.add_file_vocabs(self.parse_files)
+    self.setup_vocabs()
     trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
     with tf.variable_scope(self.name.title()):
       train_tensors = trainset()
@@ -226,32 +236,28 @@ class Network(Configurable):
       raise ValueError('Cannot provide a value for --output_file when parsing multiple files')
     self.add_file_vocabs(input_files)
     
-    # load the model and prep the parse set
-    trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
-    with tf.variable_scope(self.name.title()):
-      train_tensors = trainset()
-    train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
+    for input_file in input_files:
+      with tf.Graph().as_default():
+        config_proto = tf.ConfigProto()
+        if self.per_process_gpu_memory_fraction == -1:
+          config_proto.gpu_options.allow_growth = True
+        else:
+          config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
+        with tf.Session(config=config_proto) as sess:
+          # load the model and prep the parse set
+          self.setup_vocabs()
+          trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
+          with tf.variable_scope(self.name.title()):
+            train_tensors = trainset()
+          train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
 
-    saver = tf.train.Saver(self.save_vars, max_to_keep=1)
-    config_proto = tf.ConfigProto()
-    if self.per_process_gpu_memory_fraction == -1:
-      config_proto.gpu_options.allow_growth = True
-    else:
-      config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
-    with tf.Session(config=config_proto) as sess:
-      for var in self.non_save_vars:
-        sess.run(var.initializer)
-      saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
-      
-      # Iterate through files and batches
-      # (Hacky workaround to hopefully avoid memory issues)
-      default_graph = tf.get_default_graph()
-      default_graphdef = default_graph.as_graph_def()
-      for input_file in input_files:
-        with tf.Graph() as graph:
-          graph.import_graph_def(default_graphdef)
+          saver = tf.train.Saver(self.save_vars, max_to_keep=1)
+          for var in self.non_save_vars:
+            sess.run(var.initializer)
+          saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
           
-          parseset = Parseset.from_configurable(trainset, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
+          # Iterate through files and batches
+          parseset = Parseset.from_configurable(self, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
           with tf.variable_scope(self.name.title(), reuse=True):
             parse_tensors = parseset(moving_params=self.optimizer)
           parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
@@ -273,7 +279,9 @@ class Network(Configurable):
             probs.append(sess.run(parse_outputs, feed_dict=feed_dict))
             sents.append(tokens)
           parseset.write_probs(sents, output_path, probs)
-          del parseset
+      del trainset
+      del parseset
+      print('Finished one')
     if self.verbose:
       print(ctext('Parsing {0} file(s) took {1} seconds'.format(len(input_files), time.time()-start_time), 'bright_green'))
     return

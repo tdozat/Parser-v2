@@ -60,6 +60,11 @@ class IndexVocab(Configurable):
     return
   
   #=============================================================
+  def setup(self):
+    self.placeholder = None
+    return
+
+  #=============================================================
   def index(self, token):
     return 0 if token == '_' else int(token)
   

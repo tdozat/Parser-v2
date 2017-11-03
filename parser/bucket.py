@@ -119,6 +119,10 @@ class Bucket(Configurable):
     return bucket
     
   #=============================================================
+  def reset_placeholders(self):
+    self.embed_model.reset_placeholders()
+    return
+  #=============================================================
   @property
   def tokens(self):
     return self._tokens

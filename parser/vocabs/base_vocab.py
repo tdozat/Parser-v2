@@ -91,6 +91,13 @@ class BaseVocab(Configurable):
     return tf.nn.embedding_lookup(embeddings, placeholder)
   
   #=============================================================
+  def setup(self):
+    """"""
+
+    self.placeholder = None
+    return
+
+  #=============================================================
   def set_feed_dict(self, data, feed_dict):
     """"""
     
@@ -135,14 +142,14 @@ class BaseVocab(Configurable):
   @property
   def embeddings(self):
     return self._embeddings
-  @embeddings.setter
-  def embeddings(self, matrix):
-    if matrix.shape[1] != self.embed_size:
-      raise ValueError("Matrix shape[1] of %d doesn't match expected shape of %d" % (matrix.shape[1], self.embed_size))
-    with tf.device('/cpu:0'):
-      with tf.variable_scope(self.name.title()):
-        self._embeddings = tf.Variable(matrix, name='Embeddings', dtype=tf.float32, trainable=True)
-    return
+  #@embeddings.setter
+  #def embeddings(self, matrix):
+  #  if matrix.shape[1] != self.embed_size:
+  #    raise ValueError("Matrix shape[1] of %d doesn't match expected shape of %d" % (matrix.shape[1], self.embed_size))
+  #  with tf.device('/cpu:0'):
+  #    with tf.variable_scope(self.name.title()):
+  #      self._embeddings = tf.Variable(matrix, name='Embeddings', dtype=tf.float32, trainable=True)
+  #  return
   
   #=============================================================
   def __getitem__(self, key):
