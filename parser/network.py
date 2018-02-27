@@ -236,6 +236,7 @@ class Network(Configurable):
       raise ValueError('Cannot provide a value for --output_file when parsing multiple files')
     self.add_file_vocabs(input_files)
     
+    start_time = time.time()
     for input_file in input_files:
       with tf.Graph().as_default():
         config_proto = tf.ConfigProto()
@@ -272,7 +273,6 @@ class Network(Configurable):
           else:
             output_path = output_file
           
-          start_time = time.time()
           probs = []
           sents = []
           for feed_dict, tokens in parseset.iterbatches(shuffle=False):
