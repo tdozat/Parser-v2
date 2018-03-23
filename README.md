@@ -1,4 +1,4 @@
-# UnstableParser
+# Parser v2
 This is the parsing system that currently (as of 06/18/2017) holds state-of-the-art performance at the CoNLL2017 shared task on Universal Dependency parsing. It's under active development, so new features are likely to break old models, and it contains a bit of experimental stuff that hasn't been published or isn't working yet.
 
 ## Training the parser
