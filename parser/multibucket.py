@@ -130,8 +130,8 @@ class Multibucket(Configurable):
     indices = []
     for multibucket_ in dataset:
       indices.append(multibucket_.indices)
-    for i in xrange(1, len(indices)):
-      assert np.equal(indices[0].astype(int), indices[i].astype(int)).all()
+    #for i in xrange(1, len(indices)):
+    #  assert np.equal(indices[0].astype(int), indices[i].astype(int)).all()
     multibucket._indices = np.array(multibucket_.indices)
     buckets = [Bucket.from_dataset(dataset, i, *args, **kwargs) for i in xrange(len(multibucket_))]
     multibucket._buckets = buckets
